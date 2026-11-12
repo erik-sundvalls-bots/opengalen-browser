@@ -114,4 +114,12 @@ Open http://127.0.0.1:8765/ . The Pages deploy uses the same `site/` directory, 
 
 ## Publish
 
-Pushing `main` runs `.github/workflows/pages.yml`, which deploys `site/` with the GitHub Actions Pages workflow. The repository Pages setting has to be **GitHub Actions**, not a branch folder.
+Pushing `main` runs `.github/workflows/pages.yml`, which uploads `site/` and deploys it with GitHub Actions. The workflow asks `actions/configure-pages` to create the Pages site if it is missing.
+
+That create call needs a permission this repository's automation token does not have (`Resource not accessible by integration` on `POST /repos/.../pages`). One setting has to be flipped by someone with admin on the repo:
+
+1. Open **Settings → Pages**.
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+3. Re-run the latest **Deploy GitHub Pages** workflow, or push again.
+
+After that, the site is https://erik-sundvalls-bots.github.io/opengalen-browser/ . The workflow itself is already on `main`.
