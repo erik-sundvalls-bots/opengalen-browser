@@ -1,0 +1,136 @@
+{
+  "name": "OpenGALEN 8",
+  "dump": "OpenGALEN8_WithPropertyChains_CRM+Diseases+SurgicalProcedures+DrugOntology.dump",
+  "built": "2026-11-12T23:26:11Z",
+  "shardSize": 512,
+  "modules": [
+    "Unspecified",
+    "CRM",
+    "Disease",
+    "Procedure",
+    "Drug"
+  ],
+  "defaultConcept": "Asthma",
+  "examples": [
+    "Heart",
+    "Lung",
+    "Kidney",
+    "Liver",
+    "Femur",
+    "Asthma",
+    "Pneumonia",
+    "DiabetesMellitus",
+    "Amifostine",
+    "MyocardialInfarction",
+    "PulmonaryAtresiaWithVentricularSeptalDefect",
+    "Hypertension",
+    "ThyroidGland",
+    "Breast",
+    "Aspirin",
+    "Paracetamol",
+    "Anaemia",
+    "Drug",
+    "BodyStructure",
+    "Phenomenon"
+  ],
+  "acknowledgement": "This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org).",
+  "counts": {
+    "concepts": 125511,
+    "declaredClasses": 125389,
+    "declarationLines": 164626,
+    "impliesLines": 246576,
+    "uniqueParentLinks": 244972,
+    "selfImplies": 436,
+    "equivalentLines": 1664,
+    "equivalentPairsInDump": 1664,
+    "conceptsWithEquivalents": 8565,
+    "generated": 90775,
+    "roots": 4817,
+    "definitions": 115552,
+    "rubrics": 39690,
+    "rubricLines": 97170,
+    "sanctions": 74068,
+    "sanctionLines": 213606,
+    "labelLines": 9000,
+    "roleSanctions": 11656,
+    "labels": 4193,
+    "grailSnippets": 8882,
+    "topicQualifiers": 1346,
+    "equivalentClassAxioms": 154509,
+    "subClassAxioms": 54285,
+    "searchTokens": 29698,
+    "shards": 246
+  },
+  "files": {
+    "graph": "graph.bin.gz",
+    "search": "search.bin.gz",
+    "labels": "labels.json.gz",
+    "definitions": "d/{shard}.json.gz"
+  },
+  "bytes": {
+    "graph": 2719657,
+    "search": 3122406,
+    "labels": 41921,
+    "definitions": 3114691
+  },
+  "checks": [
+    {
+      "ok": true,
+      "label": "implies lines 246576 (expected 246576)"
+    },
+    {
+      "ok": true,
+      "label": "equivalent lines 1664 (expected 1664)"
+    },
+    {
+      "ok": true,
+      "label": "class declaration lines 164626 (expected 164626)"
+    },
+    {
+      "ok": true,
+      "label": "unique class names 125389 from 164626 declaration lines (duplicates are a translation artefact)"
+    },
+    {
+      "ok": true,
+      "label": "EquivalentClasses axioms 154509 (expected 154509)"
+    },
+    {
+      "ok": true,
+      "label": "SubClassOf axioms 54285 (expected 54285)"
+    },
+    {
+      "ok": true,
+      "label": "PulmonaryAtresia implies CongenitalPathologywhichinvolvesHeartChamber"
+    },
+    {
+      "ok": true,
+      "label": "PulmonaryAtresiaWithVentricularSeptalDefect has ancestor PhenomenonwhichinvolvesHeart (inferred, not a direct dump line)"
+    },
+    {
+      "ok": true,
+      "label": "PulmonaryAtresiaWithVentricularSeptalDefect / PhenomenonwhichinvolvesHeart is not an asserted SubClassOf"
+    },
+    {
+      "ok": true,
+      "label": "known cyclic implies edges dropped: 8 (expected 8)"
+    }
+  ],
+  "parseNotes": {
+    "annotationLinesUnparsed": 0,
+    "equivalentLinesUnparsed": 0,
+    "topConstructors": [
+      [
+        "ObjectSomeValuesFrom",
+        609154
+      ],
+      [
+        "ObjectIntersectionOf",
+        470042
+      ],
+      [
+        "DataHasValue",
+        17818
+      ]
+    ]
+  }
+}
