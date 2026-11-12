@@ -1,0 +1,58 @@
+:root {
+  --paper: #f3efe6;
+  --ink: #1c2430;
+  --muted: #5c675f;
+  --line: #d5cdbf;
+  --card: #fffdf8;
+  --teal: #0f6e6b;
+  --amber: #c46b1a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Segoe UI", "Avenir Next", system-ui, sans-serif;
+  min-height: 100vh;
+}
+h1, h2, h3 { font-family: Palatino, "Iowan Old Style", Georgia, serif; font-weight: 500; }
+header, footer, .search-row { padding: 12px 20px; }
+header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+h1 { margin: 0; font-size: 28px; }
+.sub, .fine, footer { color: var(--muted); }
+.sub { margin: 4px 0 0; max-width: 62rem; line-height: 1.4; }
+button, input { font: inherit; color: inherit; }
+button {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+button.on, button[aria-pressed="true"] { background: var(--teal); color: white; border-color: var(--teal); }
+#banner {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #1c2430;
+  color: #f3efe6;
+  padding: 14px 20px;
+}
+#banner a { color: #f2d2a2; }
+.banner-card { max-width: 68rem; }
+#banner h2 { margin: 0 0 6px; color: white; font-size: 18px; }
+#banner button { background: var(--amber); color: white; border-color: var(--amber); }
+.search-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding-top: 0; }
+.search { flex: 1 1 280px; }
+#q { width: 100%; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 8px 12px; }
+.toggles { display: flex; gap: 8px; flex-wrap: wrap; }
+.layout { display: flex; align-items: stretch; min-height: 60vh; }
+#stage { flex: 1 1 auto; position: relative; min-width: 0; }
+#status { padding: 24px 20px; color: var(--muted); }
+#panel { width: 380px; max-width: 100%; border-left: 1px solid var(--line); background: var(--card); }
+footer { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; border-top: 1px solid var(--line); }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (max-width: 800px) {
+  .layout { flex-direction: column; }
+  #panel { width: 100%; border-left: 0; border-top: 1px solid var(--line); }
+}

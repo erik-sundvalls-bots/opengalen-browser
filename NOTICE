@@ -1,0 +1,22 @@
+This repository contains two kinds of material.
+
+1. Browser code, build scripts, and documentation written for this project
+   are under the MIT License (see LICENSE).
+   Copyright 2026 Erik Sundvall (erik-sundvalls-bots), PEN&PAD revival.
+
+2. The OpenGALEN 8 source archives in sources/ and the terminology data
+   derived from them (site/data/) are Copyright the Universities of
+   Manchester and Nijmegen and their contributors, and are licensed under
+   the GALEN Open Source License (GOSL) Version 1.0 (11th October 1999).
+   The licence text shipped with the release is sources/gosl.html
+   (copied to site/gosl.html so the running site can show it).
+
+   The derived files are a compiled form of that source: integer ids,
+   the inferred hierarchy, and GRAIL-like renderings of the OWL
+   equivalent-class axioms. They were produced by build/og8_extract.py
+   from the unmodified zips. The terminology content is unchanged.
+   What changed is only the packaging (see README, "How the data is built").
+
+This product uses the OpenGALEN Clinical Terminology, Copyright the
+Universities of Manchester and Nijmegen, licensed through OpenGALEN
+(www.opengalen.org).

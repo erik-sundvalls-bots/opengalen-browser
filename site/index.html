@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenGALEN 8 browser</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="banner" role="dialog" aria-labelledby="banner-title">
+  <div class="banner-card">
+    <h2 id="banner-title">OpenGALEN acknowledgement</h2>
+    <p>This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org).</p>
+    <p class="fine">The terminology and the derived data are under the <a href="gosl.html">GALEN Open Source License</a>. Unmodified sources are kept in this repository under <a href="https://github.com/erik-sundvalls-bots/opengalen-browser/tree/main/sources">sources/</a>. The browser code itself is MIT.</p>
+    <button type="button" id="banner-ok">Continue</button>
+  </div>
+</div>
+<header>
+  <div class="brand">
+    <h1>OpenGALEN 8</h1>
+    <p class="sub">Graph browser for the classified Common Reference Model, diseases, procedures and drugs. No live reasoner: the hierarchy is the one the GALEN team published in 2010.</p>
+  </div>
+  <div class="tools">
+    <button type="button" id="about-btn">About and licence</button>
+  </div>
+</header>
+<div class="search-row">
+  <label class="search">
+    <span class="vh">Search concepts</span>
+    <input id="q" type="search" placeholder="Search concepts, for example heart, amifostine, asthma" autocomplete="off" spellcheck="false">
+  </label>
+  <div class="toggles">
+    <button type="button" id="tog-gen" aria-pressed="false">Show generated classes</button>
+    <button type="button" id="tog-sib" aria-pressed="false">Siblings</button>
+    <button type="button" id="tog-labels" aria-pressed="true" class="on">Labels</button>
+  </div>
+</div>
+<div id="suggest" role="listbox" hidden></div>
+<div class="layout">
+  <div id="stage">
+    <div id="status">Loading the hierarchy…</div>
+    <svg id="g" role="img" aria-label="Concept neighbourhood"></svg>
+  </div>
+  <aside id="panel" aria-live="polite">
+    <div id="panel-body"></div>
+  </aside>
+</div>
+<footer>
+  <span>This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org).</span>
+  <a href="gosl.html">GOSL</a>
+  <a href="https://github.com/erik-sundvalls-bots/opengalen-browser">Source</a>
+</footer>
+<div id="tip" hidden></div>
+<script src="vendor/d3.min.js"></script>
+<script src="vendor/d3-dag.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
