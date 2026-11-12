@@ -26,6 +26,9 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          # Creates the Pages site on the first run when it does not exist yet.
+          enablement: true
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
