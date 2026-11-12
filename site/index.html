@@ -27,15 +27,19 @@
 <div class="search-row">
   <label class="search">
     <span class="vh">Search concepts</span>
-    <input id="q" type="search" placeholder="Search concepts, for example heart, amifostine, asthma" autocomplete="off" spellcheck="false">
+    <input id="q" type="search" placeholder="Search concepts, for example heart, anaemia, asthma" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="suggest" aria-autocomplete="list">
+    <div id="suggest" role="listbox" hidden></div>
   </label>
   <div class="toggles">
     <button type="button" id="tog-gen" aria-pressed="false">Show generated classes</button>
     <button type="button" id="tog-sib" aria-pressed="false">Siblings</button>
     <button type="button" id="tog-labels" aria-pressed="true" class="on">Labels</button>
+    <button type="button" id="collapse">Collapse clusters</button>
+    <button type="button" id="fit">Fit</button>
   </div>
 </div>
-<div id="suggest" role="listbox" hidden></div>
+<div id="chips" class="chips"></div>
+<p id="legend" class="legend">Ancestors up to the top, with intermediate concepts grouped into a dashed +n cluster. Click a concept to refocus. Click +n to expand it. Hover a cluster to read the hidden names.</p>
 <div class="layout">
   <div id="stage">
     <div id="status">Loading the hierarchy…</div>
