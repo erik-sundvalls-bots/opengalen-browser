@@ -157,16 +157,17 @@
       }
     }
 
+    const showChildren = state.children !== false && !state.ancestorsOnly;
     const childCap = 16 + (state.childExtra || 0);
-    let childIds = children[focus].filter((id) => state.showGen || !gen[id]);
-    const childHidden = children[focus].length - childIds.length;
+    let childIds = showChildren ? children[focus].filter((id) => state.showGen || !gen[id]) : [];
+    const childHidden = showChildren ? children[focus].length - childIds.length : 0;
     const more = Math.max(0, childIds.length - childCap);
     childIds = childIds.slice(0, childCap);
     for (const id of childIds) addConcept(id, "child", null);
     if (more) nodes.set("more", { key: "more", kind: "more", count: more });
 
     const siblings = [];
-    if (state.siblings) {
+    if (state.siblings && !state.ancestorsOnly) {
       const seen = new Set([focus, ...childIds]);
       for (const parent of parentOf(focus)) {
         for (const kid of children[parent]) {
@@ -299,6 +300,7 @@
       })
       .on("zoom", (event) => {
         svg.select("g.zoom-layer").attr("transform", event.transform);
+        if (event.sourceEvent) svg.node().dispatchEvent(new CustomEvent("og-view", { bubbles: true }));
       });
     svg.on(".zoom", null);
     svg.call(zoom);

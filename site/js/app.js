@@ -35,11 +35,15 @@
   const suggest = document.getElementById("suggest");
   const panel = document.getElementById("panel-body");
   const tip = document.getElementById("tip");
-  const state = { showGen: false, siblings: false, labels: true, clustering: true, expanded: new Set(), childExtra: 0, focus: 0 };
+  const state = { showGen: false, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, expanded: new Set(), childExtra: 0, focus: 0 };
   let model = null;
   let activeSuggest = -1;
   let panelToken = 0;
   let lastView = null;
+  let pointerKind = "mouse";
+  let previewKey = null;
+  let tipTimer = 0;
+  const tipBody = document.getElementById("tip-body");
 
   function setStatus(text) { status.textContent = text || ""; }
 
@@ -66,6 +70,7 @@
       state.expanded = new Set();
       state.childExtra = 0;
     }
+    hideTip();
     state.focus = id;
     document.title = name + " · OpenGALEN 8";
     draw();
@@ -81,7 +86,7 @@
       setStatus(
         OG.spaced(g.names[state.focus])
         + " · " + lastView.ancestorCount + " ancestors"
-        + (hiddenKids ? " · " + hiddenKids + " generated children hidden" : "")
+        + (state.ancestorsOnly ? " · ancestors only" : state.children === false ? " · children hidden" : hiddenKids ? " · " + hiddenKids + " generated children hidden" : "")
       );
     } catch (err) {
       setStatus("Could not lay out this neighbourhood. " + err.message);
@@ -98,22 +103,13 @@
       up.get(link.target).push(link.source);
       down.get(link.source).push(link.target);
     }
-    function walk(start, map) {
-      const acc = new Set([start]);
-      const stack = [start];
-      while (stack.length) {
-        const node = stack.pop();
-        for (const next of map.get(node) || []) {
-          if (!acc.has(next)) {
-            acc.add(next);
-            stack.push(next);
-          }
-        }
-      }
-      return acc;
-    }
+    svg.on("pointerdown.kind", (event) => {
+      pointerKind = event.pointerType || "mouse";
+      if (pointerKind !== "mouse" && !(event.target.closest && event.target.closest(".node"))) hideTip();
+    });
     svg.selectAll(".cluster-hull").on("click", (event, index) => {
       event.stopPropagation();
+      hideTip();
       state.expanded.delete(index);
       draw();
     });
@@ -121,34 +117,80 @@
       .on("click", (event, d) => {
         event.stopPropagation();
         if (event.defaultPrevented) return;
-        if (d.kind === "cluster") {
-          state.expanded.add(d.index);
-          draw();
-          fillPanel(state.focus);
-        } else if (d.kind === "more") {
-          state.childExtra += 24;
-          draw();
-        } else {
-          go(model.graph.names[d.concept]);
+        if (pointerKind !== "mouse") {
+          if (previewKey === d.key) {
+            hideTip();
+            activate(d);
+          } else {
+            previewKey = d.key;
+            showTip(event, d, view, up, down, true);
+          }
+          return;
         }
+        activate(d);
       })
-      .on("mouseenter", (event, d) => {
-        const keys = new Set([d.key]);
-        for (const key of walk(d.key, up)) keys.add(key);
-        for (const key of walk(d.key, down)) keys.add(key);
-        svg.classed("hovering", true);
-        svg.selectAll(".node").classed("hi", (node) => keys.has(node.key));
-        svg.selectAll("path.lk").classed("hi", (link) => keys.has(link.source.key) && keys.has(link.target.key));
-        tip.hidden = false;
-        tip.innerHTML = tipHtml(d);
-        moveTip(event);
+      .on("pointerenter", (event, d) => {
+        if (event.pointerType && event.pointerType !== "mouse") return;
+        showTip(event, d, view, up, down, false);
       })
-      .on("mousemove", moveTip)
-      .on("mouseleave", () => {
-        svg.classed("hovering", false);
-        svg.selectAll(".hi").classed("hi", false);
-        tip.hidden = true;
+      .on("pointermove", (event) => {
+        if (!event.pointerType || event.pointerType === "mouse") moveTip(event);
+      })
+      .on("pointerleave", (event) => {
+        if (event.pointerType && event.pointerType !== "mouse") return;
+        hideTip();
       });
+  }
+
+  function activate(d) {
+    if (d.kind === "cluster") {
+      state.expanded.add(d.index);
+      draw();
+      fillPanel(state.focus);
+    } else if (d.kind === "more") {
+      state.childExtra += 24;
+      draw();
+    } else {
+      go(model.graph.names[d.concept]);
+    }
+  }
+
+  function highlight(svg, d, view, up, down) {
+    const keys = new Set([d.key]);
+    const walk = (start, map) => {
+      const acc = new Set([start]);
+      const stack = [start];
+      while (stack.length) {
+        const node = stack.pop();
+        for (const next of map.get(node) || []) if (!acc.has(next)) { acc.add(next); stack.push(next); }
+      }
+      return acc;
+    };
+    for (const key of walk(d.key, up)) keys.add(key);
+    for (const key of walk(d.key, down)) keys.add(key);
+    svg.classed("hovering", true);
+    svg.selectAll(".node").classed("hi", (node) => keys.has(node.key));
+    svg.selectAll("path.lk").classed("hi", (link) => keys.has(link.source.key) && keys.has(link.target.key));
+  }
+
+  function showTip(event, d, view, up, down, touch) {
+    clearTimeout(tipTimer);
+    highlight(d3.select("#g"), d, view, up, down);
+    tip.classList.toggle("is-touch", !!touch);
+    tipBody.innerHTML = tipHtml(d);
+    tip.hidden = false;
+    moveTip(event);
+    if (touch) tipTimer = setTimeout(hideTip, 6000);
+  }
+
+  function hideTip() {
+    clearTimeout(tipTimer);
+    previewKey = null;
+    tip.hidden = true;
+    tip.classList.remove("is-touch");
+    const svg = d3.select("#g");
+    svg.classed("hovering", false);
+    svg.selectAll(".hi").classed("hi", false);
   }
 
   function tipHtml(d) {
@@ -162,8 +204,13 @@
   }
 
   function moveTip(event) {
-    tip.style.left = Math.min(innerWidth - 440, event.clientX + 14) + "px";
-    tip.style.top = Math.min(innerHeight - 160, event.clientY + 14) + "px";
+    const touch = tip.classList.contains("is-touch");
+    const left = Math.max(8, Math.min(innerWidth - 380, (event.clientX || 0) + (touch ? -20 : 14)));
+    const top = touch
+      ? Math.max(8, (event.clientY || 0) - 64)
+      : Math.min(innerHeight - 80, (event.clientY || 0) + 14);
+    tip.style.left = left + "px";
+    tip.style.top = top + "px";
   }
 
   function fillPanel(id) {
@@ -322,6 +369,48 @@
     return String(text).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
   }
 
+  function childrenShown() { return state.children !== false && !state.ancestorsOnly; }
+  function siblingsShown() { return !!state.siblings && !state.ancestorsOnly; }
+  function syncActions() {
+    document.querySelectorAll("[data-act=children]").forEach((button) => button.setAttribute("aria-pressed", childrenShown() ? "true" : "false"));
+    document.querySelectorAll("[data-act=siblings]").forEach((button) => button.setAttribute("aria-pressed", siblingsShown() ? "true" : "false"));
+    document.querySelectorAll("[data-act=ancestors]").forEach((button) => button.setAttribute("aria-pressed", state.ancestorsOnly ? "true" : "false"));
+    const sib = document.getElementById("tog-sib");
+    if (sib) sib.setAttribute("aria-checked", siblingsShown() ? "true" : "false");
+  }
+  function applyAction(act) {
+    if (act === "children") {
+      if (childrenShown()) state.children = false;
+      else { state.children = true; state.ancestorsOnly = false; }
+    } else if (act === "siblings") {
+      if (siblingsShown()) state.siblings = false;
+      else { state.siblings = true; state.ancestorsOnly = false; }
+    } else if (act === "ancestors") {
+      state.ancestorsOnly = !state.ancestorsOnly;
+    } else if (act === "fit") {
+      hideTip();
+      OG.zoomGraph("fit");
+      return;
+    }
+    syncActions();
+    if (model) draw();
+  }
+  document.querySelectorAll("[data-act]").forEach((button) => {
+    button.addEventListener("click", () => applyAction(button.dataset.act));
+  });
+  document.getElementById("tog-sib").addEventListener("click", () => applyAction("siblings"));
+  document.getElementById("tip-x").addEventListener("click", (event) => {
+    event.stopPropagation();
+    hideTip();
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if ((event.pointerType || "mouse") === "mouse") return;
+    if (event.target.closest && event.target.closest(".node, #tip")) return;
+    hideTip();
+  });
+  document.getElementById("stage").addEventListener("og-view", hideTip);
+  syncActions();
+
   function wireSwitch(id, key) {
     const button = document.getElementById(id);
     const sync = () => button.setAttribute("aria-checked", state[key] ? "true" : "false");
@@ -400,7 +489,6 @@
   });
 
   wireSwitch("tog-gen", "showGen");
-  wireSwitch("tog-sib", "siblings");
   wireSwitch("tog-labels", "labels");
   wireSwitch("tog-cluster", "clustering");
 
