@@ -4,7 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OpenGALEN 8 browser</title>
-<link rel="stylesheet" href="css/app.css?v=5">
+<script>
+/* A directory URL without a trailing slash would otherwise resolve css/, js/ and data/ against the parent. */
+(function () {
+  var path = location.pathname;
+  if (path.endsWith("/")) return;
+  var last = path.slice(path.lastIndexOf("/") + 1);
+  if (last.indexOf(".") !== -1) return;
+  var base = document.createElement("base");
+  base.href = location.origin + path + "/";
+  document.head.appendChild(base);
+})();
+</script>
+<link rel="stylesheet" href="css/app.css?v=6">
 </head>
 <body>
 <header class="topbar">
@@ -16,10 +28,7 @@
   </label>
   <div class="switches" role="group" aria-label="Graph options">
     <label class="switch-row">Generated
-      <button type="button" id="tog-gen" class="switch" role="switch" aria-checked="false" aria-label="Show generated classes" title="Show generated classes"></button>
-    </label>
-    <label class="switch-row">Siblings
-      <button type="button" id="tog-sib" class="switch" role="switch" aria-checked="false" aria-label="Show siblings" title="Show siblings"></button>
+      <button type="button" id="tog-gen" class="switch" role="switch" aria-checked="true" aria-label="Show generated classes" title="Show generated classes"></button>
     </label>
     <label class="switch-row">Labels
       <button type="button" id="tog-labels" class="switch" role="switch" aria-checked="true" aria-label="Show labels" title="Show labels"></button>
@@ -60,9 +69,6 @@
       <button type="button" data-act="rels" aria-pressed="false" aria-label="Definition relationships" title="Definition relationships">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16c4-8 10-8 14 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3 2" stroke-linecap="round"/><circle cx="5" cy="16" r="2" fill="currentColor"/><circle cx="19" cy="16" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
       </button>
-      <button type="button" data-act="fit" aria-label="Fit the graph on the focus" title="Fit on focus">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l2 2-2.2 2.2 1.4 1.4L18.4 6 20 8V4h-5zM9 4H4v5l1.6-2L8 9.4l1.4-1.4L7 5.6 9 4zm0 16l-2-2 2.2-2.2-1.4-1.4L5.6 18 4 16v5h5zm6 0h5v-5l-1.6 2-2.4-2.4-1.4 1.4 2.4 2.4L15 20z" fill="currentColor"/></svg>
-      </button>
     </div>
     <div class="panel-main">
       <div id="panel-actions" class="panel-actions" aria-label="Graph actions for the focus">
@@ -70,7 +76,6 @@
         <button type="button" data-act="siblings" aria-pressed="false">Siblings</button>
         <button type="button" data-act="ancestors" aria-pressed="false">Ancestors only</button>
         <button type="button" data-act="rels" aria-pressed="false">Relationships</button>
-        <button type="button" data-act="fit">Fit</button>
       </div>
       <div id="panel-body" class="panel-scroll" aria-live="polite"></div>
     </div>
@@ -78,17 +83,17 @@
 </div>
 <dialog id="about" aria-labelledby="about-title">
   <h2 id="about-title">About and licence</h2>
-  <p class="ack">This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org).</p>
+  <p class="ack">This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org). (now mirrored at <a href="https://opengalen.eggbird.eu/">https://opengalen.eggbird.eu/</a>, contact <a href="mailto:eh@eggbird.eu">eh@eggbird.eu</a>, and archived at the Internet Archive: <a href="https://web.archive.org/web/*/opengalen.org">https://web.archive.org/web/*/opengalen.org</a>)</p>
   <p>Graph browser for the classified Common Reference Model, diseases, procedures and drugs. There is no live reasoner: the hierarchy is the one the GALEN team published in 2010, with property chains.</p>
   <p id="about-counts" class="muted"></p>
   <p>The terminology and the derived data are under the <a href="gosl.html">GALEN Open Source License</a>. Unmodified sources are in <a href="https://github.com/erik-sundvalls-bots/opengalen-browser/tree/main/sources">sources/</a>. The browser code is MIT. <a href="https://github.com/erik-sundvalls-bots/opengalen-browser">Repository</a>.</p>
   <h3>Controls</h3>
   <ul>
-    <li><b>Generated</b>, <b>Siblings</b>, <b>Labels</b>, and <b>Clustering</b> are switches beside the search box. Clustering is on at each start. Off shows every ancestor as its own node.</li>
+    <li><b>Generated</b>, <b>Labels</b>, and <b>Clustering</b> are switches beside the search box. Generated and Clustering are on at each start. Clustering off shows every ancestor as its own node. Siblings is a button in the side panel, off until you turn it on.</li>
     <li>A dashed <b>+n</b> pill is a cluster of intermediate ancestors. Click the pill to expand it. Click the coloured background of an expanded cluster, not a node, to collapse that cluster again.</li>
-    <li>The zoom tools sit on the graph: zoom in, zoom out, <b>1:1</b> (layout scale), and fit-all. Drag the background to pan. The wheel pans. Ctrl or ⌘ and the wheel zoom.</li>
-    <li>The side panel slides off to the right. The narrow strip keeps icon buttons: show the concept again, open this panel, show or hide the focus concept’s children, show or hide its siblings, ancestors only, and fit the graph. The same actions sit at the top of the open panel. The strip remembers whether it was open.</li>
-    <li>With a mouse, hover a node for its name without changing focus, and hover a collapsed cluster to read the hidden names. A click refocuses. On a touch screen the first tap is that preview and the second tap on the same node refocuses or expands the cluster. The preview closes if you tap elsewhere, pan or zoom, change focus, tap its close mark, or leave it for a few seconds.</li>
+    <li>Zoom in, zoom out, <b>1:1</b> and fit sit at the upper right of the graph. Drag the background to pan. The wheel pans. Ctrl or ⌘ and the wheel zoom.</li>
+    <li>The side panel slides off to the right. The narrow strip keeps icon buttons: show the concept again, open this panel, show or hide the focus concept’s children, show or hide its siblings, ancestors only, and definition relationships. The same actions sit at the top of the open panel. The strip remembers whether it was open.</li>
+    <li>With a mouse, hover a node for its name without changing focus, and hover a collapsed cluster to read the hidden names. A click refocuses. On a touch screen the first tap is that preview and the second tap on the same node refocuses or expands the cluster. The preview closes if you tap elsewhere, pan or zoom, change focus, tap its close mark, or leave it for a few seconds. While <b>Labels</b> is off, that preview also writes the names onto the node’s immediate parents, children and drawn relationship targets, and lists the same names in the preview, so a covered or crowded dot can still be read.</li>
     <li>The address of the focused concept is <code>#concept=Name</code>.</li>
     <li><b>Relationships</b> are off until you turn a kind on. They are the roles in the concept’s OWL definition, drawn as dashed edges in the colour of their property group. Every selected target is climbed by is-a to the root, and clustering folds the ancestors those targets share. The encircled i beside a heading explains how to read that section. A sanction in the same colour names a role that is allowed and is not drawn; a definition link is what this concept has. A nested filler such as <i>hasConsequence (X which hasReversibility Reversible)</i> is one edge to X, or to the generated which-class when that class is the filler. The nesting stays in the definition text.</li>
   </ul>
@@ -101,8 +106,8 @@
 </div>
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/d3-dag.min.js"></script>
-<script src="js/data.js?v=5"></script>
-<script src="js/graph.js?v=5"></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/data.js?v=6"></script>
+<script src="js/graph.js?v=6"></script>
+<script src="js/app.js?v=6"></script>
 </body>
 </html>

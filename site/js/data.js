@@ -33,7 +33,13 @@
   }
 
   function url(path) {
-    return new URL(path, document.baseURI).href;
+    const base = new URL(document.baseURI);
+    let pathname = base.pathname;
+    if (!pathname.endsWith("/")) {
+      const last = pathname.slice(pathname.lastIndexOf("/") + 1);
+      pathname = last.includes(".") ? pathname.slice(0, pathname.lastIndexOf("/") + 1) : pathname + "/";
+    }
+    return new URL(path, base.origin + pathname).href;
   }
 
   async function gunzip(buf) {

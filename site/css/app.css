@@ -120,13 +120,13 @@ h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; white-space: nowrap; }
   color: var(--muted);
   font-size: 13px;
   pointer-events: none;
-  max-width: 46ch;
+  max-width: calc(100% - 150px);
 }
 #g { display: block; width: 100%; height: 100%; touch-action: none; }
 .zoom-controls {
   position: absolute;
   right: 8px;
-  bottom: 6px;
+  top: 8px;
   z-index: 4;
   display: flex;
   gap: 1px;
@@ -336,6 +336,8 @@ h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; white-space: nowrap; }
   color: var(--muted);
 }
 #tip.is-touch #tip-x { display: grid; place-items: center; }
+.tip-k { display: inline-block; min-width: 7.2em; color: var(--muted); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+.peek-label { pointer-events: none; }
 svg text { pointer-events: none; }
 .node { cursor: pointer; }
 .cluster-hull { cursor: pointer; }

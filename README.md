@@ -20,7 +20,7 @@ The source zips are unmodified. `build/og8_extract.py` only repackages them: sta
 
 Acknowledgement, as GOSL requires at start-up and within the application:
 
-> This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org).
+> This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org). (now mirrored at https://opengalen.eggbird.eu/, contact [eh@eggbird.eu](mailto:eh@eggbird.eu), and archived at the Internet Archive: https://web.archive.org/web/*/opengalen.org)
 
 ## What you can do in the browser
 
@@ -28,8 +28,8 @@ Acknowledgement, as GOSL requires at start-up and within the application:
 - See its neighbourhood as a Sugiyama DAG: ancestors up to the top, with chains of intermediate concepts collapsed into a dashed **+n** cluster, direct children, and optional siblings.
 - Click a concept to refocus. Click a **+n** pill to expand that cluster. Hover a cluster to read the hidden names.
 - Read the side panel: GRAIL-like definition, sanction level, sensible and grammatical role sanctions, GRAIL `topicNecessarily` lines where the original source has them, dissection rubric, parents, children and equivalents. The panel slides away to a narrow icon strip.
-- Switches for generated classes, siblings, labels, and clustering. The zoom tools sit on the graph. Click the coloured background of an expanded cluster to collapse it.
-- Hide the long generated `…which…which…` class names (the default) or show them.
+- Switches beside the search box for generated classes (on at start), labels, and clustering. Siblings is a side-panel button. Zoom and fit sit at the upper right of the graph. Click the coloured background of an expanded cluster to collapse it.
+- Hide the long generated `…which…which…` class names, or show them. They are shown at start.
 - Permalink a concept with `#concept=Name`.
 - Repeat visits are cached in IndexedDB, including offline reuse of what has already been fetched.
 

@@ -1,4 +1,4 @@
 Derived from OpenGALEN 8 under the GALEN Open Source License.
 Copyright the Universities of Manchester and Nijmegen.
 Built by build/og8_extract.py. See the repository NOTICE and README.
-This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org).
+This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org). (now mirrored at https://opengalen.eggbird.eu/, contact mailto:eh@eggbird.eu, and archived at the Internet Archive: https://web.archive.org/web/*/opengalen.org)

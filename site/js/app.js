@@ -35,7 +35,7 @@
   const suggest = document.getElementById("suggest");
   const panel = document.getElementById("panel-body");
   const tip = document.getElementById("tip");
-  const state = { showGen: false, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, expanded: new Set(), childExtra: 0, focus: 0, rels: new Set(), relEdges: [] };
+  const state = { showGen: true, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, expanded: new Set(), childExtra: 0, focus: 0, rels: new Set(), relEdges: [] };
   let model = null;
   let activeSuggest = -1;
   let panelToken = 0;
@@ -96,6 +96,7 @@
 
   function draw() {
     try {
+      hideTip();
       lastView = OG.draw(model.graph, state.focus, state, stage);
       bindGraph(lastView);
       const g = model.graph;
@@ -216,11 +217,76 @@
     svg.selectAll("path.lk").classed("hi", (link) => keys.has(link.source.key) && keys.has(link.target.key));
   }
 
+  function drawnName(view, key) {
+    const node = view.byKey && view.byKey.get(key);
+    if (!node) return "";
+    if (node.kind === "cluster") return "+" + node.members.length;
+    if (node.kind === "more") return "+" + node.count + " more";
+    if (node.kind !== "concept") return "";
+    return OG.spaced(model.graph.names[node.concept]);
+  }
+
+  function neighbourhood(d, view, up, down) {
+    const parents = [];
+    const children = [];
+    const rels = [];
+    const labelKeys = new Set();
+    if (!d || d.kind !== "concept") return { parents, children, rels, labelKeys };
+    labelKeys.add(d.key);
+    for (const key of up.get(d.key) || []) {
+      const name = drawnName(view, key);
+      if (!name) continue;
+      parents.push(name);
+      labelKeys.add(key);
+    }
+    for (const key of down.get(d.key) || []) {
+      const name = drawnName(view, key);
+      if (!name) continue;
+      children.push(name);
+      labelKeys.add(key);
+    }
+    for (const rel of view.relLinks || []) {
+      if (rel.source !== d.key) continue;
+      const name = drawnName(view, rel.target);
+      if (!name) continue;
+      rels.push(rel.prop + " → " + name);
+      labelKeys.add(rel.target);
+    }
+    return { parents, children, rels, labelKeys };
+  }
+
+  function peekLabels(d, view, up, down) {
+    d3.select("#g").selectAll(".peek-label").remove();
+    if (state.labels || !d || d.kind !== "concept") return;
+    const near = neighbourhood(d, view, up, down);
+    d3.select("#g").selectAll(".node").each(function (node) {
+      if (!near.labelKeys.has(node.key) || node.kind !== "concept") return;
+      if (node.lines && node.lines.length) return;
+      const name = OG.spaced(model.graph.names[node.concept]);
+      const cut = name.length > 22 ? name.lastIndexOf(" ", 22) : -1;
+      const parts = cut > 8 ? [name.slice(0, cut).trim(), name.slice(cut + 1).trim()] : [name];
+      const text = d3.select(this).append("text")
+        .attr("class", "peek-label")
+        .attr("text-anchor", "middle")
+        .attr("font-size", 11)
+        .attr("font-weight", 650)
+        .attr("fill", "#1c2430")
+        .attr("paint-order", "stroke")
+        .attr("stroke", "#f3efe6")
+        .attr("stroke-width", 3);
+      parts.forEach((line, i) => {
+        const shown = line.length > 28 ? line.slice(0, 27) + "…" : line;
+        text.append("tspan").attr("x", 0).attr("y", 16 + i * 12).text(shown);
+      });
+    });
+  }
+
   function showTip(event, d, view, up, down, touch) {
     clearTimeout(tipTimer);
     highlight(d3.select("#g"), d, view, up, down);
+    peekLabels(d, view, up, down);
     tip.classList.toggle("is-touch", !!touch);
-    tipBody.innerHTML = tipHtml(d);
+    tipBody.innerHTML = tipHtml(d, view, up, down);
     tip.hidden = false;
     moveTip(event);
     if (touch) tipTimer = setTimeout(hideTip, 6000);
@@ -234,16 +300,24 @@
     const svg = d3.select("#g");
     svg.classed("hovering", false);
     svg.selectAll(".hi").classed("hi", false);
+    svg.selectAll(".peek-label").remove();
   }
 
-  function tipHtml(d) {
+  function tipHtml(d, view, up, down) {
     if (d.kind === "cluster") {
       const names = d.members.slice(0, 6).map((id) => escapeHtml(OG.spaced(model.graph.names[id])));
       const more = d.members.length > 6 ? "…" : "";
       return "<b>+" + d.members.length + "</b> " + names.join(", ") + more;
     }
     if (d.kind === "more") return "+" + d.count + " children";
-    return "<b>" + escapeHtml(OG.spaced(model.graph.names[d.concept])) + "</b>";
+    const title = "<b>" + escapeHtml(OG.spaced(model.graph.names[d.concept])) + "</b>";
+    if (state.labels) return title;
+    const near = neighbourhood(d, view, up, down);
+    const rows = [title];
+    if (near.parents.length) rows.push("<span class='tip-k'>Parents</span> " + near.parents.map(escapeHtml).join(", "));
+    if (near.children.length) rows.push("<span class='tip-k'>Children</span> " + near.children.map(escapeHtml).join(", "));
+    if (near.rels.length) rows.push("<span class='tip-k'>Relationships</span> " + near.rels.map(escapeHtml).join(", "));
+    return rows.join("<br>");
   }
 
   function moveTip(event) {
@@ -605,8 +679,6 @@
     document.querySelectorAll("[data-act=siblings]").forEach((button) => button.setAttribute("aria-pressed", siblingsShown() ? "true" : "false"));
     document.querySelectorAll("[data-act=ancestors]").forEach((button) => button.setAttribute("aria-pressed", state.ancestorsOnly ? "true" : "false"));
     document.querySelectorAll("[data-act=rels]").forEach((button) => button.setAttribute("aria-pressed", state.rels.size ? "true" : "false"));
-    const sib = document.getElementById("tog-sib");
-    if (sib) sib.setAttribute("aria-checked", siblingsShown() ? "true" : "false");
   }
   function applyAction(act) {
     if (act === "children") {
@@ -626,10 +698,6 @@
       const section = document.getElementById("rel-section");
       if (section) section.scrollIntoView({ block: "nearest" });
       return;
-    } else if (act === "fit") {
-      hideTip();
-      OG.zoomGraph("fit");
-      return;
     }
     syncActions();
     if (model) draw();
@@ -637,7 +705,6 @@
   document.querySelectorAll("[data-act]").forEach((button) => {
     button.addEventListener("click", () => applyAction(button.dataset.act));
   });
-  document.getElementById("tog-sib").addEventListener("click", () => applyAction("siblings"));
   document.getElementById("tip-x").addEventListener("click", (event) => {
     event.stopPropagation();
     hideTip();
