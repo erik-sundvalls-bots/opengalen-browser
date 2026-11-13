@@ -1,13 +1,33 @@
 (function () {
-  const banner = document.getElementById("banner");
-  const dismiss = () => {
-    banner.hidden = true;
-    sessionStorage.setItem("og-ack", "1");
+  const about = document.getElementById("about");
+  const panelEl = document.getElementById("panel");
+  const panelToggle = document.getElementById("panel-toggle");
+  function openAbout() {
+    if (typeof about.showModal === "function" && !about.open) about.showModal();
+  }
+  function closeAbout() {
+    if (about.open) about.close();
     if (model) draw();
-  };
-  if (sessionStorage.getItem("og-ack") === "1") banner.hidden = true;
-  document.getElementById("banner-ok").addEventListener("click", dismiss);
-  document.getElementById("about-btn").addEventListener("click", () => { banner.hidden = false; });
+  }
+  document.getElementById("about-btn").addEventListener("click", openAbout);
+  about.addEventListener("close", () => { if (model) draw(); });
+  openAbout();
+
+  function setPanelOpen(open) {
+    panelEl.classList.toggle("is-collapsed", !open);
+    panelToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    panelToggle.setAttribute("aria-label", open ? "Hide concept details" : "Show concept details");
+    panelToggle.title = open ? "Hide concept details" : "Show concept details";
+    try { localStorage.setItem("og-panel", open ? "open" : "collapsed"); } catch (err) { /* private mode */ }
+  }
+  setPanelOpen(localStorage.getItem("og-panel") !== "collapsed");
+  panelToggle.addEventListener("click", () => {
+    setPanelOpen(panelEl.classList.contains("is-collapsed"));
+    if (model) draw();
+  });
+  panelEl.addEventListener("transitionend", (event) => {
+    if (event.propertyName === "width" && model) draw();
+  });
 
   const status = document.getElementById("status");
   const stage = document.getElementById("stage");
@@ -15,8 +35,7 @@
   const suggest = document.getElementById("suggest");
   const panel = document.getElementById("panel-body");
   const tip = document.getElementById("tip");
-  const chips = document.getElementById("chips");
-  const state = { showGen: false, siblings: false, labels: true, expanded: new Set(), childExtra: 0, focus: 0 };
+  const state = { showGen: false, siblings: false, labels: true, clustering: true, expanded: new Set(), childExtra: 0, focus: 0 };
   let model = null;
   let activeSuggest = -1;
   let panelToken = 0;
@@ -93,6 +112,11 @@
       }
       return acc;
     }
+    svg.selectAll(".cluster-hull").on("click", (event, index) => {
+      event.stopPropagation();
+      state.expanded.delete(index);
+      draw();
+    });
     svg.selectAll(".node")
       .on("click", (event, d) => {
         event.stopPropagation();
@@ -129,17 +153,12 @@
 
   function tipHtml(d) {
     if (d.kind === "cluster") {
-      const names = d.members.slice(0, 8).map((id) => escapeHtml(OG.spaced(model.graph.names[id])));
-      const more = d.members.length > 8 ? " …" : "";
-      return "<b>+" + d.members.length + " intermediate concepts</b><br>" + names.join(" · ") + more + "<br><i>Click to expand</i>";
+      const names = d.members.slice(0, 6).map((id) => escapeHtml(OG.spaced(model.graph.names[id])));
+      const more = d.members.length > 6 ? "…" : "";
+      return "<b>+" + d.members.length + "</b> " + names.join(", ") + more;
     }
-    if (d.kind === "more") return "<b>" + d.count + " more children</b><br><i>Click to show them</i>";
-    const name = model.graph.names[d.concept];
-    const bits = [escapeHtml(name)];
-    if (model.graph.gen[d.concept]) bits.push("generated class");
-    bits.push(model.graph.parents[d.concept].length + " parents");
-    bits.push(model.graph.children[d.concept].length + " children");
-    return "<b>" + escapeHtml(OG.spaced(name)) + "</b><br><code>" + bits.join(" · ") + "</code>";
+    if (d.kind === "more") return "+" + d.count + " children";
+    return "<b>" + escapeHtml(OG.spaced(model.graph.names[d.concept])) + "</b>";
   }
 
   function moveTip(event) {
@@ -303,13 +322,15 @@
     return String(text).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
   }
 
-  function wireToggle(id, key) {
+  function wireSwitch(id, key) {
     const button = document.getElementById(id);
+    const sync = () => button.setAttribute("aria-checked", state[key] ? "true" : "false");
+    sync();
     button.addEventListener("click", () => {
       state[key] = !state[key];
-      button.setAttribute("aria-pressed", state[key] ? "true" : "false");
-      button.classList.toggle("on", state[key]);
+      sync();
       if (key === "showGen") state.childExtra = 0;
+      if (key === "clustering") state.expanded = new Set();
       draw();
       fillPanel(state.focus);
     });
@@ -374,16 +395,14 @@
     }
   });
 
-  document.getElementById("collapse").addEventListener("click", () => {
-    state.expanded = new Set();
-    state.childExtra = 0;
-    draw();
+  document.querySelectorAll("[data-zoom]").forEach((button) => {
+    button.addEventListener("click", () => OG.zoomGraph(button.dataset.zoom));
   });
-  document.getElementById("fit").addEventListener("click", draw);
 
-  wireToggle("tog-gen", "showGen");
-  wireToggle("tog-sib", "siblings");
-  wireToggle("tog-labels", "labels");
+  wireSwitch("tog-gen", "showGen");
+  wireSwitch("tog-sib", "siblings");
+  wireSwitch("tog-labels", "labels");
+  wireSwitch("tog-cluster", "clustering");
 
   let resizeTimer = 0;
   addEventListener("resize", () => {
@@ -397,19 +416,12 @@
 
   OG.loadAll(setStatus).then((loaded) => {
     model = loaded;
-    const examples = ["Heart", "Asthma", "Anaemia", "Hypertension", "DiabetesMellitus", "Kidney", "Amifostine", "Breast"];
-    for (const name of examples) {
-      if (!model.graph.byName.has(name)) continue;
-      const a = document.createElement("a");
-      a.href = "#concept=" + encodeURIComponent(name);
-      a.textContent = name;
-      chips.append(a);
-    }
     const counts = model.meta.counts;
-    const legend = document.getElementById("legend");
-    legend.textContent = counts.concepts.toLocaleString() + " concepts, " + counts.uniqueParentLinks.toLocaleString()
-      + " parent links from the with-property-chains hierarchy. "
-      + legend.textContent;
+    const aboutCounts = document.getElementById("about-counts");
+    if (aboutCounts) {
+      aboutCounts.textContent = counts.concepts.toLocaleString() + " concepts and "
+        + counts.uniqueParentLinks.toLocaleString() + " parent links, from the with-property-chains hierarchy.";
+    }
     const named = hashName();
     const start = named && model.graph.byName.has(named) ? named : model.meta.defaultConcept;
     if (!named) history.replaceState(null, "", "#concept=" + encodeURIComponent(start));

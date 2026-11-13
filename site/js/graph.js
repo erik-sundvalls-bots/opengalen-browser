@@ -117,11 +117,14 @@
     if (anc.size > 400 && !state.showGen) {
       /* already hiding generated; nothing further */
     }
-    const expanded = state.expanded;
+    const clusteringOn = state.clustering !== false;
+    const expanded = clusteringOn ? state.expanded : new Set();
     const inCollapsed = new Map();
-    clusters.forEach((members, index) => {
-      if (!expanded.has(index)) members.forEach((id) => inCollapsed.set(id, index));
-    });
+    if (clusteringOn) {
+      clusters.forEach((members, index) => {
+        if (!expanded.has(index)) members.forEach((id) => inCollapsed.set(id, index));
+      });
+    }
 
     function rep(id) {
       if (inCollapsed.has(id)) return "c" + inCollapsed.get(id);
@@ -130,9 +133,11 @@
 
     const nodes = new Map();
     const expandedIndex = new Map();
-    clusters.forEach((members, index) => {
-      if (expanded.has(index)) members.forEach((id) => expandedIndex.set(id, index));
-    });
+    if (clusteringOn) {
+      clusters.forEach((members, index) => {
+        if (expanded.has(index)) members.forEach((id) => expandedIndex.set(id, index));
+      });
+    }
     function addConcept(id, role, cluster) {
       const key = "n" + id;
       const existing = nodes.get(key);
@@ -147,7 +152,7 @@
         const index = inCollapsed.get(id);
         const key = "c" + index;
         if (!nodes.has(key)) nodes.set(key, { key, kind: "cluster", index, members: clusters[index] });
-      } else if (keep.has(id) || expandedIndex.has(id)) {
+      } else if (!clusteringOn || keep.has(id) || expandedIndex.has(id)) {
         addConcept(id, id === focus ? "focus" : "anc", expandedIndex.has(id) ? expandedIndex.get(id) : null);
       }
     }
@@ -283,22 +288,36 @@
     const sc = Math.min(1.05, (width - 16) / (size.width + pad), (height - 16) / (size.height + pad));
     const tx = Math.max(12, (width - size.width * sc) / 2);
     const ty = 20;
-    const g = svg.append("g").attr("id", "viewport");
-    if (!OG._zoom) {
-      OG._zoom = d3.zoom().scaleExtent([0.15, 3]).on("zoom", (event) => {
-        d3.select("#viewport").attr("transform", event.transform);
+    const g = svg.append("g").attr("class", "zoom-layer");
+    const zoom = d3.zoom()
+      .scaleExtent([0.2, 8])
+      .filter((event) => {
+        if (event.type === "wheel") return event.ctrlKey || event.metaKey;
+        const target = event.target;
+        if (typeof target.closest === "function" && target.closest(".node, .cluster-hull, .zoom-controls")) return false;
+        return !event.button;
+      })
+      .on("zoom", (event) => {
+        svg.select("g.zoom-layer").attr("transform", event.transform);
       });
-    }
     svg.on(".zoom", null);
-    svg.call(OG._zoom);
-    svg.call(OG._zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+    svg.call(zoom);
+    svg.on("wheel.pan", (event) => {
+      if (event.ctrlKey || event.metaKey) return;
+      event.preventDefault();
+      svg.call(zoom.translateBy, -event.deltaX, -event.deltaY);
+    });
+    const fit = d3.zoomIdentity.translate(tx, ty).scale(sc);
+    svg.call(zoom.transform, fit);
+    svg.node().__ogZoom = zoom;
+    svg.node().__ogFit = fit;
 
     const pos = new Map();
     for (const node of dag) pos.set(node.data.key, [node.x, node.y]);
     const linkGen = d3.line().curve(d3.curveBumpY);
 
     const hull = g.append("g").attr("class", "hulls");
-    const linkG = g.append("g").attr("fill", "none");
+    const linkG = g.append("g").attr("fill", "none").attr("pointer-events", "none");
     const nodeG = g.append("g");
     const clusterPts = new Map();
 
@@ -367,12 +386,14 @@
       const hullPts = pts.length >= 3 ? d3.polygonHull(pts) : null;
       const d = hullPts ? "M" + hullPts.join("L") + "Z" : pts.length === 2 ? `M${pts[0]} L${pts[1]}` : `M${pts[0]} l0.1,0`;
       hull.append("path")
+        .attr("class", "cluster-hull")
+        .datum(index)
         .attr("d", d)
         .attr("fill", hullPts ? col : "none")
-        .attr("fill-opacity", .1)
+        .attr("fill-opacity", .12)
         .attr("stroke", col)
-        .attr("stroke-opacity", .18)
-        .attr("stroke-width", pts.length >= 2 ? 22 : 0)
+        .attr("stroke-opacity", .2)
+        .attr("stroke-width", pts.length >= 2 ? 28 : 0)
         .attr("stroke-linejoin", "round")
         .attr("stroke-linecap", "round");
     }
@@ -386,6 +407,41 @@
     return graph.parents[id].length;
   }
 
+  function zoomGraph(mode) {
+    const node = document.getElementById("g");
+    const zoom = node && node.__ogZoom;
+    if (!zoom) return;
+    const svg = d3.select(node);
+    const play = (duration, apply) => svg.transition().duration(duration).call(apply);
+    if (mode === "in") {
+      play(180, (selection) => selection.call(zoom.scaleBy, 1.35));
+      return;
+    }
+    if (mode === "out") {
+      play(180, (selection) => selection.call(zoom.scaleBy, 1 / 1.35));
+      return;
+    }
+    if (mode === "one") {
+      play(220, (selection) => selection.call(zoom.transform, d3.zoomIdentity));
+      return;
+    }
+    const layer = svg.select("g.zoom-layer").node();
+    if (!layer) return;
+    const bounds = layer.getBBox();
+    const width = node.clientWidth || 0;
+    const height = node.clientHeight || 0;
+    if (!bounds.width || !bounds.height || !width || !height) {
+      if (node.__ogFit) play(280, (selection) => selection.call(zoom.transform, node.__ogFit));
+      return;
+    }
+    const pad = 28;
+    const k = Math.max(0.2, Math.min(8, Math.min((width - pad * 2) / bounds.width, (height - pad * 2) / bounds.height)));
+    const tx = (width - bounds.width * k) / 2 - bounds.x * k;
+    const ty = (height - bounds.height * k) / 2 - bounds.y * k;
+    play(280, (selection) => selection.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(k)));
+  }
+
   OG.buildView = buildView;
   OG.draw = draw;
+  OG.zoomGraph = zoomGraph;
 })();

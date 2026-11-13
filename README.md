@@ -27,7 +27,8 @@ Acknowledgement, as GOSL requires at start-up and within the application:
 - Search a concept (prefix or words from the CamelCase name, plus the published language annotations).
 - See its neighbourhood as a Sugiyama DAG: ancestors up to the top, with chains of intermediate concepts collapsed into a dashed **+n** cluster, direct children, and optional siblings.
 - Click a concept to refocus. Click a **+n** pill to expand that cluster. Hover a cluster to read the hidden names.
-- Read the side panel: GRAIL-like definition, sanction level, sensible and grammatical role sanctions, GRAIL `topicNecessarily` lines where the original source has them, dissection rubric, parents, children and equivalents.
+- Read the side panel: GRAIL-like definition, sanction level, sensible and grammatical role sanctions, GRAIL `topicNecessarily` lines where the original source has them, dissection rubric, parents, children and equivalents. The panel slides away to a narrow icon strip.
+- Switches for generated classes, siblings, labels, and clustering. The zoom tools sit on the graph. Click the coloured background of an expanded cluster to collapse it.
 - Hide the long generated `…which…which…` class names (the default) or show them.
 - Permalink a concept with `#concept=Name`.
 - Repeat visits are cached in IndexedDB, including offline reuse of what has already been fetched.
@@ -99,7 +100,7 @@ The first view fetches the graph, the search index, the labels and `meta.json`: 
 
 - There is no in-browser reasoner. The hierarchy is the 2010 with-property-chains dump.
 - Eight `implies` cycles in that dump are dropped so the picture is a DAG. They are listed in `build/VALIDATION.md`. Mostly they are very long surgical-procedure names that imply an even longer sibling expression, plus three short `BodyStructure` loops.
-- A neighbourhood with many parents (Heart has 79 ancestors) is dense. Labels can overlap. Zoom, Fit, and turning labels off are the relief valves. `decrossOpt` is exponential on these DAGs, so the layout uses `decrossTwoLayer`. The vertical gap is the V7 value of 46; the horizontal gap is wider because GALEN names are long.
+- A neighbourhood with many parents (Heart has 79 ancestors) is dense. Labels can overlap. The on-canvas zoom tools and turning labels off are the relief valves. `decrossOpt` is exponential on these DAGs, so the layout uses `decrossTwoLayer`. The vertical gap is the V7 value of 46; the horizontal gap is wider because GALEN names are long.
 - A concept with no OWL equivalent-class expression is shown as primitive: parents, children and sanctions, and the panel says so. `Anaemia` is an example that does have a GRAIL-like definition.
 - `topicNecessarily` is read from the GRAIL sources when the line is a simple subject-qualifier-role-object statement. The OWL file itself only distinguishes sensible (`S-SANCTION-`) and grammatical (`G-SANCTION-`) sanctions.
 - Generated-class detection is a name heuristic, not an OWL flag. Short single-`which` names such as `PhenomenonwhichinvolvesHeart` stay visible.

@@ -7,53 +7,68 @@
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-<div id="banner" role="dialog" aria-labelledby="banner-title">
-  <div class="banner-card">
-    <h2 id="banner-title">OpenGALEN acknowledgement</h2>
-    <p>This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org).</p>
-    <p class="fine">The terminology and the derived data are under the <a href="gosl.html">GALEN Open Source License</a>. Unmodified sources are kept in this repository under <a href="https://github.com/erik-sundvalls-bots/opengalen-browser/tree/main/sources">sources/</a>. The browser code itself is MIT.</p>
-    <button type="button" id="banner-ok">Continue</button>
-  </div>
-</div>
-<header>
-  <div class="brand">
-    <h1>OpenGALEN 8</h1>
-    <p class="sub">Graph browser for the classified Common Reference Model, diseases, procedures and drugs. No live reasoner: the hierarchy is the one the GALEN team published in 2010.</p>
-  </div>
-  <div class="tools">
-    <button type="button" id="about-btn">About and licence</button>
-  </div>
-</header>
-<div class="search-row">
+<header class="topbar">
+  <h1>OpenGALEN 8</h1>
   <label class="search">
     <span class="vh">Search concepts</span>
     <input id="q" type="search" placeholder="Search concepts, for example heart, anaemia, asthma" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="suggest" aria-autocomplete="list">
     <div id="suggest" role="listbox" hidden></div>
   </label>
-  <div class="toggles">
-    <button type="button" id="tog-gen" aria-pressed="false">Show generated classes</button>
-    <button type="button" id="tog-sib" aria-pressed="false">Siblings</button>
-    <button type="button" id="tog-labels" aria-pressed="true" class="on">Labels</button>
-    <button type="button" id="collapse">Collapse clusters</button>
-    <button type="button" id="fit">Fit</button>
+  <div class="switches" role="group" aria-label="Graph options">
+    <label class="switch-row">Generated
+      <button type="button" id="tog-gen" class="switch" role="switch" aria-checked="false" aria-label="Show generated classes" title="Show generated classes"></button>
+    </label>
+    <label class="switch-row">Siblings
+      <button type="button" id="tog-sib" class="switch" role="switch" aria-checked="false" aria-label="Show siblings" title="Show siblings"></button>
+    </label>
+    <label class="switch-row">Labels
+      <button type="button" id="tog-labels" class="switch" role="switch" aria-checked="true" aria-label="Show labels" title="Show labels"></button>
+    </label>
+    <label class="switch-row">Clustering
+      <button type="button" id="tog-cluster" class="switch" role="switch" aria-checked="true" aria-label="Cluster intermediate ancestors" title="Cluster intermediate ancestors"></button>
+    </label>
   </div>
-</div>
-<div id="chips" class="chips"></div>
-<p id="legend" class="legend">Ancestors up to the top, with intermediate concepts grouped into a dashed +n cluster. Click a concept to refocus. Click +n to expand it. Hover a cluster to read the hidden names.</p>
+</header>
 <div class="layout">
   <div id="stage">
     <div id="status">Loading the hierarchy…</div>
     <svg id="g" role="img" aria-label="Concept neighbourhood"></svg>
+    <div class="zoom-controls" aria-label="Zoom">
+      <button type="button" data-zoom="in" aria-label="Zoom in" title="Zoom in"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/><path d="M12 10h-2v2H9v-2H7V9h2V7h1v2h2z"/></svg></button>
+      <button type="button" data-zoom="out" aria-label="Zoom out" title="Zoom out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z"/></svg></button>
+      <button type="button" data-zoom="one" class="zoom-one" aria-label="Original scale" title="Original scale">1:1</button>
+      <button type="button" data-zoom="fit" aria-label="Show all nodes" title="Show all nodes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM9 3H3v6l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3zm0 18l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6h6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6v-6z"/></svg></button>
+    </div>
   </div>
-  <aside id="panel" aria-live="polite">
-    <div id="panel-body"></div>
+  <aside id="panel" aria-label="Concept details">
+    <div class="rail">
+      <button type="button" id="panel-toggle" aria-expanded="true" aria-controls="panel-body" aria-label="Hide concept details" title="Hide concept details">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button type="button" id="about-btn" aria-label="About and licence" title="About and licence">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="8" r="0.9" fill="currentColor"/></svg>
+      </button>
+    </div>
+    <div id="panel-body" class="panel-scroll" aria-live="polite"></div>
   </aside>
 </div>
-<footer>
-  <span>This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org).</span>
-  <a href="gosl.html">GOSL</a>
-  <a href="https://github.com/erik-sundvalls-bots/opengalen-browser">Source</a>
-</footer>
+<dialog id="about" aria-labelledby="about-title">
+  <h2 id="about-title">About and licence</h2>
+  <p class="ack">This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org).</p>
+  <p>Graph browser for the classified Common Reference Model, diseases, procedures and drugs. There is no live reasoner: the hierarchy is the one the GALEN team published in 2010, with property chains.</p>
+  <p id="about-counts" class="muted"></p>
+  <p>The terminology and the derived data are under the <a href="gosl.html">GALEN Open Source License</a>. Unmodified sources are in <a href="https://github.com/erik-sundvalls-bots/opengalen-browser/tree/main/sources">sources/</a>. The browser code is MIT. <a href="https://github.com/erik-sundvalls-bots/opengalen-browser">Repository</a>.</p>
+  <h3>Controls</h3>
+  <ul>
+    <li><b>Generated</b>, <b>Siblings</b>, <b>Labels</b>, and <b>Clustering</b> are switches beside the search box. Clustering is on at each start. Off shows every ancestor as its own node.</li>
+    <li>A dashed <b>+n</b> pill is a cluster of intermediate ancestors. Click the pill to expand it. Click the coloured background of an expanded cluster, not a node, to collapse that cluster again.</li>
+    <li>The zoom tools sit on the graph: zoom in, zoom out, <b>1:1</b> (layout scale), and fit-all. Drag the background to pan. The wheel pans. Ctrl or ⌘ and the wheel zoom.</li>
+    <li>The side panel slides off to the right. The narrow strip keeps two icon buttons: show the concept again, and open this panel. The strip remembers whether it was open.</li>
+    <li>Hover a node for its name without changing focus. Hover a collapsed cluster to read the hidden names. The side panel is the focused concept: definition, sanctions, rubric, parents, and children.</li>
+    <li>Click a concept to refocus it. The address is <code>#concept=Name</code>.</li>
+  </ul>
+  <form method="dialog"><button type="submit" id="about-ok">Continue</button></form>
+</dialog>
 <div id="tip" hidden></div>
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/d3-dag.min.js"></script>
