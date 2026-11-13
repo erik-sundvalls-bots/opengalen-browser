@@ -47,7 +47,7 @@
     return out;
   }
 
-  function clusterAncestors(focus, vis, parentOf) {
+  function clusterAncestors(seeds, vis, parentOf) {
     const kids = new Map();
     for (const id of vis) kids.set(id, []);
     for (const id of vis) {
@@ -55,9 +55,9 @@
     }
     const roots = [...vis].filter((id) => parentOf(id).length === 0);
     const keep = new Set(roots);
-    keep.add(focus);
+    for (const seed of seeds) if (vis.has(seed)) keep.add(seed);
     for (const root of roots) for (const child of kids.get(root)) keep.add(child);
-    for (const parent of parentOf(focus)) keep.add(parent);
+    for (const seed of seeds) for (const parent of parentOf(seed)) if (vis.has(parent)) keep.add(parent);
 
     const rest = [...vis].filter((id) => !keep.has(id));
     const restSet = new Set(rest);
@@ -106,14 +106,24 @@
 
   function buildView(graph, focus, state) {
     const { parents, children, gen, names } = graph;
+    const chosen = (state.relEdges || []).filter((edge) => state.rels && state.rels.has(edge.prop));
+    const relEdges = [];
     const anc = ancestorSet(parents, focus);
+    for (const edge of chosen) {
+      if (relEdges.length >= 8) break;
+      const extra = ancestorSet(parents, edge.target);
+      if (anc.size + extra.size > 200 && relEdges.length) continue;
+      for (const id of extra) anc.add(id);
+      relEdges.push(edge);
+    }
+    const seeds = [focus, ...relEdges.map((edge) => edge.target)];
     const hidden = new Set();
     if (!state.showGen) {
-      for (const id of anc) if (id !== focus && gen[id]) hidden.add(id);
+      for (const id of anc) if (!seeds.includes(id) && gen[id]) hidden.add(id);
     }
     const vis = new Set([...anc].filter((id) => !hidden.has(id)));
     const parentOf = (id) => upsOf(parents, anc, hidden, id).filter((p) => vis.has(p));
-    let { keep, clusters } = clusterAncestors(focus, vis, parentOf);
+    let { keep, clusters } = clusterAncestors(seeds, vis, parentOf);
     if (anc.size > 400 && !state.showGen) {
       /* already hiding generated; nothing further */
     }
@@ -214,11 +224,20 @@
       }
     }
     if (more) link("n" + focus, "more", "child");
+    const relLinks = [];
+    for (const edge of relEdges) {
+      const from = rep(focus);
+      const to = rep(edge.target);
+      if (!nodes.has(from) || !nodes.has(to) || from === to) continue;
+      relLinks.push({ source: from, target: to, kind: "rel", prop: edge.prop, color: edge.color, group: edge.group, targetId: edge.target });
+    }
 
     return {
       nodes: [...nodes.values()],
       links,
       clusters,
+      relLinks,
+      relOmitted: Math.max(0, chosen.length - relEdges.length),
       childHidden,
       ancestorCount: anc.size,
       visibleCount: vis.size,
@@ -271,7 +290,7 @@
     });
     const byKey = new Map(prepared.map((node) => [node.key, node]));
     const incoming = new Map(prepared.map((node) => [node.key, []]));
-    for (const link of view.links) incoming.get(link.target).push(link.source);
+    for (const link of view.links) if (link.kind !== "rel") incoming.get(link.target).push(link.source);
 
     let dag;
     let size;
@@ -295,7 +314,7 @@
       .filter((event) => {
         if (event.type === "wheel") return event.ctrlKey || event.metaKey;
         const target = event.target;
-        if (typeof target.closest === "function" && target.closest(".node, .cluster-hull, .zoom-controls")) return false;
+        if (typeof target.closest === "function" && target.closest(".node, .cluster-hull, .rel-edge, .zoom-controls")) return false;
         return !event.button;
       })
       .on("zoom", (event) => {
@@ -320,6 +339,7 @@
 
     const hull = g.append("g").attr("class", "hulls");
     const linkG = g.append("g").attr("fill", "none").attr("pointer-events", "none");
+    const relG = g.append("g").attr("class", "rel-links");
     const nodeG = g.append("g");
     const clusterPts = new Map();
 
@@ -381,6 +401,36 @@
         data.lines.forEach((line, i) => {
           text.append("tspan").attr("x", 0).attr("y", 16 + i * 12).text(line);
         });
+      }
+    }
+    for (const rel of view.relLinks || []) {
+      const a = pos.get(rel.source);
+      const b = pos.get(rel.target);
+      if (!a || !b) continue;
+      const mx = (a[0] + b[0]) / 2 + (a[0] <= b[0] ? 36 : -36);
+      const my = (a[1] + b[1]) / 2;
+      relG.append("path")
+        .attr("class", "rel-edge")
+        .attr("d", `M${a[0]},${a[1]} Q${mx},${my} ${b[0]},${b[1]}`)
+        .attr("fill", "none")
+        .attr("stroke", rel.color)
+        .attr("stroke-width", 1.8)
+        .attr("stroke-dasharray", "7 4")
+        .attr("stroke-linecap", "round")
+        .datum(rel);
+      if (state.labels) {
+        relG.append("text")
+          .attr("class", "rel-label")
+          .attr("x", mx)
+          .attr("y", my)
+          .attr("text-anchor", "middle")
+          .attr("font-size", 10)
+          .attr("font-weight", 700)
+          .attr("fill", rel.color)
+          .attr("paint-order", "stroke")
+          .attr("stroke", "#f3efe6")
+          .attr("stroke-width", 3)
+          .text(rel.prop);
       }
     }
     for (const [index, pts] of clusterPts) {

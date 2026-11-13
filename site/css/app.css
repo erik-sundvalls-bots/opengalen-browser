@@ -302,6 +302,22 @@ h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; white-space: nowrap; }
 svg text { pointer-events: none; }
 .node { cursor: pointer; }
 .cluster-hull { cursor: pointer; }
+.rel-edge { cursor: pointer; }
+.rel-label { pointer-events: none; }
+.rel-key { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 6px 0; }
+.rel-key span { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+.rel-swatch { width: 18px; border-top: 2px dashed currentColor; }
+.rel-kind { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; }
+.rel-group { margin: 8px 0 2px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.rel-actions { display: flex; gap: 6px; margin-bottom: 4px; }
+.rel-actions button, .rel-kind button {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+.rel-kind button[aria-pressed="true"] { color: #fff; border-color: transparent; }
 svg.hovering .dimmable { opacity: .14; }
 svg.hovering .dimmable.hi { opacity: 1; }
 svg.hovering path.lk.hi { stroke-opacity: .95 !important; }

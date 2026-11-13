@@ -299,6 +299,81 @@ def grail_body(text: str) -> str:
     return parts[-1] if parts else text
 
 
+ROLE_OPS = ("ObjectSomeValuesFrom", "ObjectAllValuesFrom", "ObjectHasValue")
+BROAD_GROUPS = {
+    "Attribute",
+    "InverseAttribute",
+    "DomainAttribute",
+    "InverseDomainAttribute",
+}
+
+
+def top_restrictions(expr):
+    """Role restrictions that belong to this expression, not to a nested filler."""
+    if not isinstance(expr, tuple) or len(expr) != 2:
+        return
+    op, args = expr
+    if op == "ObjectIntersectionOf":
+        for arg in args:
+            if isinstance(arg, tuple) and arg[0] in ROLE_OPS and len(arg[1]) >= 2 and isinstance(arg[1][0], str):
+                yield arg[1][0], arg[1][1]
+        return
+    if op in ROLE_OPS and len(args) >= 2 and isinstance(args[0], str):
+        yield args[0], args[1]
+
+
+def named_target(node):
+    """The concept a restriction points at.
+
+    A named filler is that concept, including a generated which-class.
+    A nested anonymous filler (hasConsequence (X which hasReversibility Reversible))
+    points at the genus, which GALEN writes last in the intersection. The nested
+    roles stay in the definition text rather than becoming extra edges.
+    """
+    if isinstance(node, str):
+        return node
+    if not isinstance(node, tuple) or len(node) != 2:
+        return None
+    op, args = node
+    if op == "ObjectIntersectionOf":
+        named = [arg for arg in args if isinstance(arg, str)]
+        if named:
+            return named[-1]
+        for arg in args:
+            if isinstance(arg, tuple) and arg[0] in ROLE_OPS and len(arg[1]) >= 2:
+                found = named_target(arg[1][1])
+                if found:
+                    return found
+        return None
+    if op in ROLE_OPS and len(args) >= 2:
+        return named_target(args[1])
+    return None
+
+
+def property_group(prop: str, parents: dict[str, set[str]]) -> str:
+    """Attribute category used to group a role in the panel.
+
+    LocativeAttribute groups hasSpecificLocation. ConstructiveAttribute is only
+    used when nothing finer sits between the role and DomainAttribute.
+    """
+    chain = []
+    seen = set()
+    cursor = prop
+    while cursor and cursor not in seen:
+        seen.add(cursor)
+        chain.append(cursor)
+        ups = parents.get(cursor) or set()
+        cursor = sorted(ups)[0] if ups else None
+    coarse = {"ConstructiveAttribute", "InverseConstructiveAttribute"}
+    fine = [name for name in chain if name.endswith("Attribute") and name not in BROAD_GROUPS and name not in coarse]
+    if fine:
+        return fine[-1]
+    broader = [name for name in chain if name.endswith("Attribute") and name not in BROAD_GROUPS]
+    if broader:
+        return broader[-1]
+    return prop
+
+
 def qualifier_phrase(prop: str, value: str) -> str | None:
     if prop.startswith("S-SANCTION-") and prop.endswith("AP"):
         role = prop[len("S-SANCTION-") : -2]
@@ -353,6 +428,8 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
     labels: dict[str, str] = {}
     features: dict[str, str] = {}
     quals: dict[str, set[str]] = defaultdict(set)
+    prop_parents: dict[str, set[str]] = defaultdict(set)
+    role_edges: dict[str, set[tuple[str, str]]] = defaultdict(set)
     unknown_ops: Counter[str] = Counter()
     ann_fail = 0
     eq_fail = 0
@@ -384,6 +461,16 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
                         cname = bag.setdefault(cname, cname)
                         declared.setdefault(cname, mod)
                     continue
+                if line.startswith("SubObjectPropertyOf("):
+                    try:
+                        node = axiom_call(line)
+                    except Exception:
+                        continue
+                    if isinstance(node, tuple) and node[0] == "SubObjectPropertyOf" and len(node[1]) >= 2:
+                        child, parent = node[1][0], node[1][1]
+                        if isinstance(child, str) and isinstance(parent, str):
+                            prop_parents[child].add(parent)
+                    continue
                 if line.startswith("SubClassOf("):
                     n_sub += 1
                     if SPOT_CHILD in line and SPOT_PARENT in line:
@@ -401,6 +488,7 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
                         continue
                     named = []
                     complex_text = ""
+                    complex_node = None
                     for arg in node[1]:
                         if isinstance(arg, str):
                             named.append(bag.setdefault(arg, arg))
@@ -411,6 +499,7 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
                             rendered = render(arg)
                             if len(rendered) > len(complex_text):
                                 complex_text = rendered
+                                complex_node = arg
                     if complex_text.startswith("Object") or "Object" in complex_text[:40]:
                         pass
                     for i, cname in enumerate(named):
@@ -418,6 +507,14 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
                         equiv_names[cname].update(others)
                         if complex_text and len(complex_text) > len(defs.get(cname, "")):
                             defs[cname] = complex_text
+                    if complex_node:
+                        for role, filler in top_restrictions(complex_node):
+                            target = named_target(filler)
+                            if not target or target == role:
+                                continue
+                            for cname in named:
+                                if cname != target:
+                                    role_edges[cname].add((role, target))
                     continue
                 if line.startswith("AnnotationAssertion("):
                     try:
@@ -476,6 +573,8 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
         "n_rubric_lines": n_rubric_lines,
         "n_sanction_lines": n_sanction_lines,
         "n_label_lines": n_label_lines,
+        "prop_parents": prop_parents,
+        "role_edges": role_edges,
     }
 
 
@@ -821,6 +920,69 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
         raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         (shard_dir / f"{sid:04d}.json.gz").write_bytes(gzip_bytes(raw))
 
+    print("writing relationship shards", flush=True)
+    prop_parents = owl["prop_parents"]
+
+    def skip_role(role: str) -> bool:
+        if "Dissection" in role or role in {"hasReadCode", "hasLanguageAnnotation", "hasCategoryString", "hasPrecedence"}:
+            return True
+        seen = set()
+        cursor = role
+        while cursor and cursor not in seen:
+            seen.add(cursor)
+            if "Dissection" in cursor or cursor == "ApplicationAttribute":
+                return True
+            ups = prop_parents.get(cursor) or set()
+            cursor = sorted(ups)[0] if ups else None
+        return False
+
+    used_props = sorted({role for pairs in owl["role_edges"].values() for role, _target in pairs if not skip_role(role)})
+    group_name = {prop: property_group(prop, prop_parents) for prop in used_props}
+    group_list = sorted(set(group_name.values()))
+    group_index = {name: i for i, name in enumerate(group_list)}
+    prop_index = {prop: i for i, prop in enumerate(used_props)}
+    props_doc = {
+        "groups": group_list,
+        "props": [{"n": prop, "g": group_index[group_name[prop]]} for prop in used_props],
+    }
+    (out_dir / "props.json.gz").write_bytes(
+        gzip_bytes(json.dumps(props_doc, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+    )
+    rel_dir = out_dir / "r"
+    if rel_dir.exists():
+        for old in rel_dir.glob("*.json.gz"):
+            old.unlink()
+    rel_dir.mkdir(exist_ok=True)
+    rel_bufs: dict[int, dict] = defaultdict(dict)
+    n_rel = 0
+    n_rel_concepts = 0
+    for cname, pairs in owl["role_edges"].items():
+        if cname not in id_of:
+            continue
+        rows = []
+        seen_row = set()
+        for role, target in pairs:
+            if skip_role(role) or target not in id_of or target == cname:
+                continue
+            row = (prop_index[role], id_of[target])
+            if row in seen_row:
+                continue
+            seen_row.add(row)
+            rows.append(list(row))
+        if not rows:
+            continue
+        rows.sort()
+        cid = id_of[cname]
+        rel_bufs[cid // SHARD][str(cid)] = rows
+        n_rel += len(rows)
+        n_rel_concepts += 1
+    for sid, payload in rel_bufs.items():
+        raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        (rel_dir / f"{sid:04d}.json.gz").write_bytes(gzip_bytes(raw))
+    rel_bytes = sum(p.stat().st_size for p in rel_dir.glob("*.json.gz"))
+    props_bytes = (out_dir / "props.json.gz").stat().st_size
+    print(f"  relationship edges {n_rel} on {n_rel_concepts} concepts, {len(group_list)} groups, {props_bytes+rel_bytes} bytes", flush=True)
+
     labels_out = {str(id_of[name]): text for name, text in owl["labels"].items() if name in id_of}
     (out_dir / "labels.json.gz").write_bytes(
         gzip_bytes(json.dumps(labels_out, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
@@ -953,18 +1115,25 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
             "subClassAxioms": owl["n_sub"],
             "searchTokens": len(postings),
             "shards": len(shard_bufs),
+            "relationshipEdges": n_rel,
+            "conceptsWithRelationships": n_rel_concepts,
+            "relationshipGroups": len(group_list),
         },
         "files": {
             "graph": "graph.bin.gz",
             "search": "search.bin.gz",
             "labels": "labels.json.gz",
             "definitions": "d/{shard}.json.gz",
+            "properties": "props.json.gz",
+            "relationships": "r/{shard}.json.gz",
         },
         "bytes": {
             "graph": sz(graph_path),
             "search": sz(search_path),
             "labels": sz(out_dir / "labels.json.gz"),
             "definitions": shard_bytes,
+            "properties": props_bytes,
+            "relationships": rel_bytes,
         },
         "checks": [{"ok": ok, "label": label} for ok, label in checks],
         "parseNotes": {
@@ -1003,6 +1172,8 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
         f"- search.bin.gz: {sz(search_path):,} bytes",
         f"- labels.json.gz: {sz(out_dir / 'labels.json.gz'):,} bytes",
         f"- definition shards: {len(shard_bufs)} files, {shard_bytes:,} bytes",
+        f"- props.json.gz: {props_bytes:,} bytes",
+        f"- relationship shards: {len(list(rel_dir.glob('*.json.gz')))} files, {rel_bytes:,} bytes, {n_rel:,} edges on {n_rel_concepts:,} concepts in {len(group_list)} groups",
         f"- concepts in the browser graph: {n:,} (declarations plus any dump-only names)",
         f"- generated names hidden by default: {n_generated:,}",
         f"- default concept: `{default}`",

@@ -3,7 +3,7 @@
 
 import unittest
 
-from og8_extract import axiom_call, is_generated, render
+from og8_extract import axiom_call, is_generated, named_target, property_group, render, top_restrictions
 
 
 class RenderTests(unittest.TestCase):
@@ -46,6 +46,33 @@ class RenderTests(unittest.TestCase):
         named = [arg for arg in node[1] if isinstance(arg, str)]
         self.assertEqual(named[0], "AnteriorBodyWall")
         self.assertIn("which", named[1])
+
+    def test_nested_filler_points_at_genus(self):
+        line = (
+            "EquivalentClasses(<http://www.opengalen.org/owl/opengalen.owl#Example> "
+            "ObjectIntersectionOf(ObjectSomeValuesFrom("
+            "<http://www.opengalen.org/owl/opengalen.owl#hasConsequence> "
+            "ObjectIntersectionOf(ObjectSomeValuesFrom("
+            "<http://www.opengalen.org/owl/opengalen.owl#hasReversibility> "
+            "<http://www.opengalen.org/owl/opengalen.owl#Reversible>) "
+            "<http://www.opengalen.org/owl/opengalen.owl#PathologicalProcess>)) "
+            "<http://www.opengalen.org/owl/opengalen.owl#Phenomenon>))"
+        )
+        node = axiom_call(line)
+        roles = list(top_restrictions(node[1][1]))
+        self.assertEqual([role for role, _filler in roles], ["hasConsequence"])
+        self.assertEqual(named_target(roles[0][1]), "PathologicalProcess")
+        self.assertNotIn("hasReversibility", [role for role, _filler in roles])
+
+    def test_property_group_is_locative(self):
+        parents = {
+            "hasSpecificLocation": {"hasLocation"},
+            "hasLocation": {"LocativeAttribute"},
+            "LocativeAttribute": {"ConstructiveAttribute"},
+            "ConstructiveAttribute": {"DomainAttribute"},
+            "DomainAttribute": {"Attribute"},
+        }
+        self.assertEqual(property_group("hasSpecificLocation", parents), "LocativeAttribute")
 
     def test_generated_heuristic(self):
         self.assertFalse(is_generated("Heart"))

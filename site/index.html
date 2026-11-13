@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OpenGALEN 8 browser</title>
-<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/app.css?v=4">
 </head>
 <body>
 <header class="topbar">
@@ -57,6 +57,9 @@
       <button type="button" data-act="ancestors" aria-pressed="false" aria-label="Ancestors only" title="Ancestors only">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V7M12 7l-4 4M12 7l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
+      <button type="button" data-act="rels" aria-pressed="false" aria-label="Definition relationships" title="Definition relationships">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16c4-8 10-8 14 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3 2" stroke-linecap="round"/><circle cx="5" cy="16" r="2" fill="currentColor"/><circle cx="19" cy="16" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+      </button>
       <button type="button" data-act="fit" aria-label="Fit the graph on the focus" title="Fit on focus">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l2 2-2.2 2.2 1.4 1.4L18.4 6 20 8V4h-5zM9 4H4v5l1.6-2L8 9.4l1.4-1.4L7 5.6 9 4zm0 16l-2-2 2.2-2.2-1.4-1.4L5.6 18 4 16v5h5zm6 0h5v-5l-1.6 2-2.4-2.4-1.4 1.4 2.4 2.4L15 20z" fill="currentColor"/></svg>
       </button>
@@ -66,6 +69,7 @@
         <button type="button" data-act="children" aria-pressed="true">Children</button>
         <button type="button" data-act="siblings" aria-pressed="false">Siblings</button>
         <button type="button" data-act="ancestors" aria-pressed="false">Ancestors only</button>
+        <button type="button" data-act="rels" aria-pressed="false">Relationships</button>
         <button type="button" data-act="fit">Fit</button>
       </div>
       <div id="panel-body" class="panel-scroll" aria-live="polite"></div>
@@ -86,6 +90,7 @@
     <li>The side panel slides off to the right. The narrow strip keeps icon buttons: show the concept again, open this panel, show or hide the focus concept’s children, show or hide its siblings, ancestors only, and fit the graph. The same actions sit at the top of the open panel. The strip remembers whether it was open.</li>
     <li>With a mouse, hover a node for its name without changing focus, and hover a collapsed cluster to read the hidden names. A click refocuses. On a touch screen the first tap is that preview and the second tap on the same node refocuses or expands the cluster. The preview closes if you tap elsewhere, pan or zoom, change focus, tap its close mark, or leave it for a few seconds.</li>
     <li>The address of the focused concept is <code>#concept=Name</code>.</li>
+    <li><b>Relationships</b> are off until you turn a kind on. They are the roles in the concept’s OWL definition, drawn as dashed edges in the colour of their property group, then the is-a ancestors of those targets are climbed like any other concept. Sanctions use the same colours when they name the same role, but they are not drawn: a sanction says what is allowed, and a definition link says what this concept actually has. A nested filler such as <i>hasConsequence (X which hasReversibility Reversible)</i> is one edge to X, or to the generated which-class when that class is the filler. The nesting stays in the definition text.</li>
   </ul>
   <form method="dialog"><button type="submit" id="about-ok">Continue</button></form>
 </dialog>
@@ -95,8 +100,8 @@
 </div>
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/d3-dag.min.js"></script>
-<script src="js/data.js"></script>
-<script src="js/graph.js"></script>
-<script src="js/app.js"></script>
+<script src="js/data.js?v=4"></script>
+<script src="js/graph.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
 </body>
 </html>

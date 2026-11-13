@@ -1,7 +1,7 @@
 {
   "name": "OpenGALEN 8",
   "dump": "OpenGALEN8_WithPropertyChains_CRM+Diseases+SurgicalProcedures+DrugOntology.dump",
-  "built": "2026-11-12T23:26:11Z",
+  "built": "2026-11-13T06:27:47Z",
   "shardSize": 512,
   "modules": [
     "Unspecified",
@@ -59,19 +59,26 @@
     "equivalentClassAxioms": 154509,
     "subClassAxioms": 54285,
     "searchTokens": 29698,
-    "shards": 246
+    "shards": 246,
+    "relationshipEdges": 149129,
+    "conceptsWithRelationships": 106275,
+    "relationshipGroups": 52
   },
   "files": {
     "graph": "graph.bin.gz",
     "search": "search.bin.gz",
     "labels": "labels.json.gz",
-    "definitions": "d/{shard}.json.gz"
+    "definitions": "d/{shard}.json.gz",
+    "properties": "props.json.gz",
+    "relationships": "r/{shard}.json.gz"
   },
   "bytes": {
     "graph": 2719657,
     "search": 3122406,
     "labels": 41921,
-    "definitions": 3114691
+    "definitions": 3114691,
+    "properties": 3247,
+    "relationships": 441220
   },
   "checks": [
     {

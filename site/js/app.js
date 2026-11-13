@@ -35,7 +35,7 @@
   const suggest = document.getElementById("suggest");
   const panel = document.getElementById("panel-body");
   const tip = document.getElementById("tip");
-  const state = { showGen: false, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, expanded: new Set(), childExtra: 0, focus: 0 };
+  const state = { showGen: false, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, expanded: new Set(), childExtra: 0, focus: 0, rels: new Set(), relEdges: [] };
   let model = null;
   let activeSuggest = -1;
   let panelToken = 0;
@@ -44,6 +44,8 @@
   let previewKey = null;
   let tipTimer = 0;
   const tipBody = document.getElementById("tip-body");
+  let focusRels = [];
+  let relToken = 0;
 
   function setStatus(text) { status.textContent = text || ""; }
 
@@ -72,9 +74,23 @@
     }
     hideTip();
     state.focus = id;
+    state.relEdges = [];
     document.title = name + " · OpenGALEN 8";
     draw();
     fillPanel(id);
+    loadFocusRels(id);
+  }
+
+  async function loadFocusRels(id) {
+    const token = ++relToken;
+    let rows = [];
+    try { rows = await OG.loadRels(model, id); } catch (err) { rows = []; }
+    if (token !== relToken || state.focus !== id) return;
+    focusRels = rows;
+    state.relEdges = rows.filter((edge) => state.rels.has(edge.prop));
+    draw();
+    paintRelSection();
+    recolorPanel();
   }
 
   function draw() {
@@ -139,6 +155,32 @@
       .on("pointerleave", (event) => {
         if (event.pointerType && event.pointerType !== "mouse") return;
         hideTip();
+      });
+    svg.selectAll(".rel-edge")
+      .on("pointerenter", (event, rel) => {
+        if (event.pointerType && event.pointerType !== "mouse") return;
+        tip.classList.remove("is-touch");
+        const target = model.graph.names[rel.targetId];
+        tipBody.innerHTML = "<b>" + escapeHtml(rel.prop) + "</b> → " + escapeHtml(OG.spaced(target));
+        tip.hidden = false;
+        moveTip(event);
+      })
+      .on("pointermove", (event) => { if (!event.pointerType || event.pointerType === "mouse") moveTip(event); })
+      .on("pointerleave", (event) => { if (!event.pointerType || event.pointerType === "mouse") hideTip(); })
+      .on("click", (event, rel) => {
+        event.stopPropagation();
+        if (pointerKind !== "mouse" && previewKey !== "rel:" + rel.prop + ":" + rel.targetId) {
+          previewKey = "rel:" + rel.prop + ":" + rel.targetId;
+          tip.classList.add("is-touch");
+          tipBody.innerHTML = "<b>" + escapeHtml(rel.prop) + "</b> → " + escapeHtml(OG.spaced(model.graph.names[rel.targetId]));
+          tip.hidden = false;
+          moveTip(event);
+          clearTimeout(tipTimer);
+          tipTimer = setTimeout(hideTip, 6000);
+          return;
+        }
+        hideTip();
+        go(model.graph.names[rel.targetId]);
       });
   }
 
@@ -213,6 +255,136 @@
     tip.style.top = top + "px";
   }
 
+  function relColorMap() {
+    const map = new Map();
+    for (const edge of focusRels) if (!map.has(edge.prop)) map.set(edge.prop, edge.color);
+    return map;
+  }
+
+  function paintColored(el, text) {
+    const map = relColorMap();
+    const names = [...map.keys()].sort((a, b) => b.length - a.length);
+    el.replaceChildren();
+    if (!names.length) {
+      el.textContent = text;
+      return;
+    }
+    const re = new RegExp("(?<![A-Za-z0-9])(?:" + names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")(?![A-Za-z0-9])", "g");
+    let last = 0;
+    for (const match of text.matchAll(re)) {
+      if (match.index > last) el.append(text.slice(last, match.index));
+      const span = document.createElement("span");
+      span.className = "rel-word";
+      span.style.color = map.get(match[0]);
+      span.style.fontWeight = "700";
+      span.textContent = match[0];
+      el.append(span);
+      last = match.index + match[0].length;
+    }
+    if (last < text.length) el.append(text.slice(last));
+  }
+
+  function paintPhrase(li, phrase) {
+    const space = phrase.indexOf(" ");
+    li.replaceChildren();
+    if (space < 0) {
+      li.textContent = phrase;
+      return;
+    }
+    const em = document.createElement("em");
+    em.textContent = phrase.slice(0, space);
+    li.append(em, " ");
+    const rest = document.createElement("span");
+    paintColored(rest, phrase.slice(space + 1));
+    li.append(rest);
+  }
+
+  function recolorPanel() {
+    const def = document.getElementById("def-text");
+    if (def && def.dataset.raw) paintColored(def, def.dataset.raw);
+    document.querySelectorAll(".qual-line").forEach((li) => paintPhrase(li, li.dataset.phrase || ""));
+    const grail = document.getElementById("grail-text");
+    if (grail && grail.dataset.raw) paintColored(grail, grail.dataset.raw);
+  }
+
+  function paintRelSection() {
+    const box = document.getElementById("rel-box");
+    if (!box) return;
+    box.replaceChildren();
+    if (!focusRels.length) {
+      box.textContent = "This concept’s definition has no role to draw.";
+      box.className = "muted";
+      return;
+    }
+    box.className = "";
+    const actions = document.createElement("div");
+    actions.className = "rel-actions";
+    const all = document.createElement("button");
+    all.type = "button";
+    all.textContent = "All";
+    const none = document.createElement("button");
+    none.type = "button";
+    none.textContent = "None";
+    all.addEventListener("click", () => { state.rels = new Set(focusRels.map((edge) => edge.prop)); applyRelSelection(); });
+    none.addEventListener("click", () => { state.rels = new Set(); applyRelSelection(); });
+    actions.append(all, none);
+    box.append(actions);
+    const groups = new Map();
+    for (const edge of focusRels) {
+      if (!groups.has(edge.group)) groups.set(edge.group, new Map());
+      const kinds = groups.get(edge.group);
+      if (!kinds.has(edge.prop)) kinds.set(edge.prop, { color: edge.color, n: 0 });
+      kinds.get(edge.prop).n += 1;
+    }
+    const key = document.createElement("div");
+    key.className = "rel-key";
+    for (const [group, kinds] of groups) {
+      const heading = document.createElement("div");
+      heading.className = "rel-group";
+      heading.textContent = group;
+      box.append(heading);
+      for (const [prop, info] of kinds) {
+        const row = document.createElement("div");
+        row.className = "rel-kind";
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = prop + " (" + info.n + ")";
+        button.setAttribute("aria-pressed", state.rels.has(prop) ? "true" : "false");
+        button.style.background = state.rels.has(prop) ? info.color : "";
+        button.addEventListener("click", () => {
+          if (state.rels.has(prop)) state.rels.delete(prop);
+          else state.rels.add(prop);
+          applyRelSelection();
+        });
+        const sw = document.createElement("span");
+        sw.className = "rel-swatch";
+        sw.style.color = info.color;
+        row.append(button, sw);
+        box.append(row);
+        const legend = document.createElement("span");
+        legend.style.color = info.color;
+        const dash = document.createElement("i");
+        dash.className = "rel-swatch";
+        legend.append(dash, prop);
+        key.append(legend);
+      }
+    }
+    const note = document.createElement("p");
+    note.className = "muted";
+    const omitted = lastView && lastView.relOmitted ? lastView.relOmitted : 0;
+    note.textContent = "Dashed edges are definition roles. The same colour on a sanction, or in the GRAIL source, names that role but is not drawn: a sanction says what is allowed, a definition link says what this concept has."
+      + (omitted ? " " + omitted + " further role" + (omitted === 1 ? " is" : "s are") + " left off so the ancestor climb stays readable." : " At most eight targets are climbed.");
+    box.append(key, note);
+    syncActions();
+  }
+
+  function applyRelSelection() {
+    state.relEdges = focusRels.filter((edge) => state.rels.has(edge.prop));
+    syncActions();
+    if (model) draw();
+    paintRelSection();
+  }
+
   function fillPanel(id) {
     const token = ++panelToken;
     const g = model.graph;
@@ -229,7 +401,12 @@
     official.className = "official";
     official.innerHTML = "<code>" + escapeHtml(name) + "</code>";
     panel.append(kicker, title, official);
+    const relSlot = section("Relationships");
+    relSlot.el.id = "rel-section";
+    relSlot.body.id = "rel-box";
+    relSlot.body.textContent = "Loading definition relationships…";
     const defSlot = section("Definition");
+    defSlot.body.id = "def-text";
     defSlot.body.textContent = "Loading the definition…";
     const qualSlot = section("Sanctions and qualifiers");
     const rubricSlot = section("Dissection rubric");
@@ -273,9 +450,11 @@
       if (!rec || !rec.d) {
         defSlot.body.textContent = "No equivalent-class expression is published for this concept. It is carried by its parents and by any sanctions below.";
         defSlot.body.className = "muted";
+        defSlot.body.dataset.raw = "";
       } else {
-        defSlot.body.textContent = rec.d;
         defSlot.body.className = "def";
+        defSlot.body.dataset.raw = rec.d;
+        paintColored(defSlot.body, rec.d);
       }
       if (rec && rec.q && rec.q.length) {
         qualSlot.el.hidden = false;
@@ -283,13 +462,10 @@
         ul.className = "quals";
         for (const phrase of rec.q) {
           const li = document.createElement("li");
-          const space = phrase.indexOf(" ");
-          if (space > 0) {
-            const em = document.createElement("em");
-            em.textContent = phrase.slice(0, space);
-            li.append(em, " " + phrase.slice(space + 1));
-          } else li.textContent = phrase;
+          li.className = "qual-line";
+          li.dataset.phrase = phrase;
           ul.append(li);
+          paintPhrase(li, phrase);
         }
         qualSlot.body.append(ul);
       }
@@ -307,8 +483,10 @@
       if (rec && rec.g) {
         grailSlot.el.hidden = false;
         const pre = document.createElement("pre");
+        pre.id = "grail-text";
         pre.className = "grail";
-        pre.textContent = rec.g;
+        pre.dataset.raw = rec.g;
+        paintColored(pre, rec.g);
         grailSlot.body.append(pre);
       }
       if (rec && rec.l && rec.l !== title.textContent) {
@@ -375,6 +553,7 @@
     document.querySelectorAll("[data-act=children]").forEach((button) => button.setAttribute("aria-pressed", childrenShown() ? "true" : "false"));
     document.querySelectorAll("[data-act=siblings]").forEach((button) => button.setAttribute("aria-pressed", siblingsShown() ? "true" : "false"));
     document.querySelectorAll("[data-act=ancestors]").forEach((button) => button.setAttribute("aria-pressed", state.ancestorsOnly ? "true" : "false"));
+    document.querySelectorAll("[data-act=rels]").forEach((button) => button.setAttribute("aria-pressed", state.rels.size ? "true" : "false"));
     const sib = document.getElementById("tog-sib");
     if (sib) sib.setAttribute("aria-checked", siblingsShown() ? "true" : "false");
   }
@@ -387,6 +566,15 @@
       else { state.siblings = true; state.ancestorsOnly = false; }
     } else if (act === "ancestors") {
       state.ancestorsOnly = !state.ancestorsOnly;
+    } else if (act === "rels") {
+      const kinds = [...new Set(focusRels.map((edge) => edge.prop))];
+      const allOn = kinds.length > 0 && kinds.every((kind) => state.rels.has(kind));
+      state.rels = allOn ? new Set() : new Set(kinds);
+      if (panelEl.classList.contains("is-collapsed")) setPanelOpen(true);
+      applyRelSelection();
+      const section = document.getElementById("rel-section");
+      if (section) section.scrollIntoView({ block: "nearest" });
+      return;
     } else if (act === "fit") {
       hideTip();
       OG.zoomGraph("fit");

@@ -1,6 +1,6 @@
 # OpenGALEN 8 extraction checks
 
-Built 2026-11-12T23:26:11Z.
+Built 2026-11-13T06:27:47Z.
 
 ## Counts
 
@@ -23,6 +23,8 @@ Built 2026-11-12T23:26:11Z.
 - search.bin.gz: 3,122,406 bytes
 - labels.json.gz: 41,921 bytes
 - definition shards: 246 files, 3,114,691 bytes
+- props.json.gz: 3,247 bytes
+- relationship shards: 246 files, 441,220 bytes, 149,129 edges on 106,275 concepts in 52 groups
 - concepts in the browser graph: 125,511 (declarations plus any dump-only names)
 - generated names hidden by default: 90,775
 - default concept: `Asthma`

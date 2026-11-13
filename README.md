@@ -92,9 +92,10 @@ Gzipped artefacts from the last build:
 | `search.bin.gz` | 3,122,406 |
 | `labels.json.gz` | 41,921 |
 | 246 definition shards | 3,114,691 |
+| `props.json.gz` plus relationship shards | 444,467 |
 | vendored d3 + d3-dag | about 375,000 |
 
-The first view fetches the graph, the search index, the labels and `meta.json`: about **6.3 MB** on the wire. Definition shards load when a concept is opened. On a local server the page was interactive in about **0.6 s**, of which the 6 MB download was a few tens of milliseconds, so building the indexes and the first Sugiyama layout is about half a second once the bytes have arrived. Repeat visits read those files from IndexedDB.
+The first view fetches the graph, the search index, the labels and `meta.json`: about **6.3 MB** on the wire. Definition shards, and the relationship shards for non-is-a roles, load when a concept is opened. The relationship extract is 149,129 edges on 106,275 concepts in 52 property groups, and it is not part of the first load. On a local server the page was interactive in about **0.6 s**, of which the 6 MB download was a few tens of milliseconds, so building the indexes and the first Sugiyama layout is about half a second once the bytes have arrived. Repeat visits read those files from IndexedDB.
 
 ## Known limits
 
@@ -102,6 +103,7 @@ The first view fetches the graph, the search index, the labels and `meta.json`: 
 - Eight `implies` cycles in that dump are dropped so the picture is a DAG. They are listed in `build/VALIDATION.md`. Mostly they are very long surgical-procedure names that imply an even longer sibling expression, plus three short `BodyStructure` loops.
 - A neighbourhood with many parents (Heart has 79 ancestors) is dense. Labels can overlap. The on-canvas zoom tools and turning labels off are the relief valves. `decrossOpt` is exponential on these DAGs, so the layout uses `decrossTwoLayer`. The vertical gap is the V7 value of 46; the horizontal gap is wider because GALEN names are long.
 - A concept with no OWL equivalent-class expression is shown as primitive: parents, children and sanctions, and the panel says so. `Anaemia` is an example that does have a GRAIL-like definition.
+- Definition roles are optional dashed edges, off until a kind is switched on. At most eight targets are added, and a target is skipped once the ancestor set would pass about 200 concepts. A nested filler is one edge to its genus (the last named class in the intersection) or to the named class when the filler is a single class. Roles inside that filler, and sanctions, stay in the panel and are not drawn. Dissection and application-metadata roles are left out of the shards.
 - `topicNecessarily` is read from the GRAIL sources when the line is a simple subject-qualifier-role-object statement. The OWL file itself only distinguishes sensible (`S-SANCTION-`) and grammatical (`G-SANCTION-`) sanctions.
 - Generated-class detection is a name heuristic, not an OWL flag. Short single-`which` names such as `PhenomenonwhichinvolvesHeart` stay visible.
 

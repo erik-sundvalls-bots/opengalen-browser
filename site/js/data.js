@@ -252,8 +252,54 @@
     return { meta, graph, search, labels, labelEntries };
   }
 
+  const REL_COLORS = ["#6b3fa0", "#c45a5a", "#1d6a9a", "#a67c12", "#0e7a62", "#b5485d", "#3d7a4a", "#7a4b8c", "#c46b1a", "#3a4f8c", "#8a4b2f", "#5a6b2f", "#8a3d6b", "#2f5f73", "#6b5420", "#4a3d7a"];
+  let propsDoc = null;
+  const relShardCache = new Map();
+
+  async function loadProps(model) {
+    if (propsDoc && propsDoc.built === model.meta.built) return propsDoc;
+    const raw = await cachedBytes("data/" + model.meta.files.properties, model.meta.built);
+    const doc = JSON.parse(new TextDecoder().decode(raw));
+    doc.built = model.meta.built;
+    propsDoc = doc;
+    return doc;
+  }
+
+  async function loadRels(model, id) {
+    const props = await loadProps(model);
+    const sid = Math.floor(id / model.meta.shardSize);
+    const path = "data/r/" + String(sid).padStart(4, "0") + ".json.gz";
+    const key = model.meta.built + "|" + path;
+    if (!relShardCache.has(key)) {
+      let obj = null;
+      try { obj = await idbGet(key); } catch (err) { obj = null; }
+      if (!obj) {
+        try {
+          const raw = await cachedBytes(path, model.meta.built);
+          obj = JSON.parse(new TextDecoder().decode(raw));
+        } catch (err) {
+          obj = {};
+        }
+        try { await idbSet(key, obj); } catch (e) { /* ignore */ }
+      }
+      relShardCache.set(key, obj);
+    }
+    const rows = relShardCache.get(key)[String(id)] || [];
+    return rows.map(([propIndex, target]) => {
+      const prop = props.props[propIndex];
+      return {
+        prop: prop.n,
+        group: props.groups[prop.g],
+        groupIndex: prop.g,
+        target,
+        color: REL_COLORS[prop.g % REL_COLORS.length],
+      };
+    });
+  }
+
   OG.loadAll = loadAll;
   OG.loadRecord = loadRecord;
+  OG.loadRels = loadRels;
   OG.searchConcepts = searchConcepts;
   OG.spaced = spaced;
 })();
