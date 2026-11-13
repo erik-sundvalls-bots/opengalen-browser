@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OpenGALEN 8 browser</title>
-<link rel="stylesheet" href="css/app.css?v=4">
+<link rel="stylesheet" href="css/app.css?v=5">
 </head>
 <body>
 <header class="topbar">
@@ -90,18 +90,19 @@
     <li>The side panel slides off to the right. The narrow strip keeps icon buttons: show the concept again, open this panel, show or hide the focus concept’s children, show or hide its siblings, ancestors only, and fit the graph. The same actions sit at the top of the open panel. The strip remembers whether it was open.</li>
     <li>With a mouse, hover a node for its name without changing focus, and hover a collapsed cluster to read the hidden names. A click refocuses. On a touch screen the first tap is that preview and the second tap on the same node refocuses or expands the cluster. The preview closes if you tap elsewhere, pan or zoom, change focus, tap its close mark, or leave it for a few seconds.</li>
     <li>The address of the focused concept is <code>#concept=Name</code>.</li>
-    <li><b>Relationships</b> are off until you turn a kind on. They are the roles in the concept’s OWL definition, drawn as dashed edges in the colour of their property group, then the is-a ancestors of those targets are climbed like any other concept. Sanctions use the same colours when they name the same role, but they are not drawn: a sanction says what is allowed, and a definition link says what this concept actually has. A nested filler such as <i>hasConsequence (X which hasReversibility Reversible)</i> is one edge to X, or to the generated which-class when that class is the filler. The nesting stays in the definition text.</li>
+    <li><b>Relationships</b> are off until you turn a kind on. They are the roles in the concept’s OWL definition, drawn as dashed edges in the colour of their property group. Every selected target is climbed by is-a to the root, and clustering folds the ancestors those targets share. The encircled i beside a heading explains how to read that section. A sanction in the same colour names a role that is allowed and is not drawn; a definition link is what this concept has. A nested filler such as <i>hasConsequence (X which hasReversibility Reversible)</i> is one edge to X, or to the generated which-class when that class is the filler. The nesting stays in the definition text.</li>
   </ul>
   <form method="dialog"><button type="submit" id="about-ok">Continue</button></form>
 </dialog>
+<div id="info-pop" hidden></div>
 <div id="tip" hidden>
   <button type="button" id="tip-x" aria-label="Close preview" hidden>×</button>
   <div id="tip-body"></div>
 </div>
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/d3-dag.min.js"></script>
-<script src="js/data.js?v=4"></script>
-<script src="js/graph.js?v=4"></script>
-<script src="js/app.js?v=4"></script>
+<script src="js/data.js?v=5"></script>
+<script src="js/graph.js?v=5"></script>
+<script src="js/app.js?v=5"></script>
 </body>
 </html>

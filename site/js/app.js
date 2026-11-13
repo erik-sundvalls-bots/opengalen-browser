@@ -73,6 +73,7 @@
       state.childExtra = 0;
     }
     hideTip();
+    hideInfo();
     state.focus = id;
     state.relEdges = [];
     document.title = name + " · OpenGALEN 8";
@@ -255,6 +256,56 @@
     tip.style.top = top + "px";
   }
 
+  const infoPop = document.getElementById("info-pop");
+  let infoAnchor = null;
+
+  function hideInfo() {
+    infoPop.hidden = true;
+    infoAnchor = null;
+  }
+
+  function showInfo(anchor, text, toggle) {
+    if (toggle && infoAnchor === anchor && !infoPop.hidden) {
+      hideInfo();
+      return;
+    }
+    infoPop.textContent = text;
+    infoAnchor = anchor;
+    infoPop.hidden = false;
+    const rect = anchor.getBoundingClientRect();
+    const width = infoPop.offsetWidth;
+    const height = infoPop.offsetHeight;
+    let left = rect.left - width - 8;
+    if (left < 8) left = Math.min(innerWidth - width - 8, rect.right + 8);
+    let top = rect.top;
+    if (top + height > innerHeight - 8) top = Math.max(8, innerHeight - height - 8);
+    infoPop.style.left = Math.max(8, left) + "px";
+    infoPop.style.top = top + "px";
+  }
+
+  function infoButton(text) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "info";
+    button.setAttribute("aria-label", text);
+    button.textContent = "i";
+    button.addEventListener("pointerdown", (event) => { pointerKind = event.pointerType || "mouse"; });
+    button.addEventListener("pointerenter", (event) => {
+      if (event.pointerType && event.pointerType !== "mouse") return;
+      showInfo(button, text, false);
+    });
+    button.addEventListener("pointerleave", (event) => {
+      if (event.pointerType && event.pointerType !== "mouse") return;
+      hideInfo();
+    });
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if ((event.pointerType || pointerKind) === "mouse") return;
+      showInfo(button, text, true);
+    });
+    return button;
+  }
+
   function relColorMap() {
     const map = new Map();
     for (const edge of focusRels) if (!map.has(edge.prop)) map.set(edge.prop, edge.color);
@@ -369,12 +420,7 @@
         key.append(legend);
       }
     }
-    const note = document.createElement("p");
-    note.className = "muted";
-    const omitted = lastView && lastView.relOmitted ? lastView.relOmitted : 0;
-    note.textContent = "Dashed edges are definition roles. The same colour on a sanction, or in the GRAIL source, names that role but is not drawn: a sanction says what is allowed, a definition link says what this concept has."
-      + (omitted ? " " + omitted + " further role" + (omitted === 1 ? " is" : "s are") + " left off so the ancestor climb stays readable." : " At most eight targets are climbed.");
-    box.append(key, note);
+    box.append(key);
     syncActions();
   }
 
@@ -391,6 +437,7 @@
     const name = g.names[id];
     const moduleName = model.meta.modules[g.mod[id]] || "Unspecified";
     const label = model.labels[String(id)];
+    hideInfo();
     panel.innerHTML = "";
     const kicker = document.createElement("p");
     kicker.className = "kicker";
@@ -401,7 +448,7 @@
     official.className = "official";
     official.innerHTML = "<code>" + escapeHtml(name) + "</code>";
     panel.append(kicker, title, official);
-    const relSlot = section("Relationships");
+    const relSlot = section("Relationships", "Dashed edges are definition roles. The same colour on a sanction, or in the GRAIL source, names that role but is not drawn: a sanction says what is allowed, and a definition link says what this concept has. Every selected target is climbed by is-a to the root, and clustering folds the shared ancestors. A nested filler is one edge to its genus; the nesting stays in the definition text.");
     relSlot.el.id = "rel-section";
     relSlot.body.id = "rel-box";
     relSlot.body.textContent = "Loading definition relationships…";
@@ -418,7 +465,7 @@
     const shownParents = parents.filter((pid) => state.showGen || !g.gen[pid]);
     const hiddenParents = parents.length - shownParents.length;
     fillLinks(parentSlot.body, shownParents);
-    if (hiddenParents) note(parentSlot.body, hiddenParents + " generated parents are hidden. Turn on “Show generated classes” to list them.");
+    if (hiddenParents) note(parentSlot.body, hiddenParents + (hiddenParents === 1 ? " generated parent hidden" : " generated parents hidden"), "Turn on “Show generated classes” to list them.");
 
     const kids = g.children[id].filter((cid) => state.showGen || !g.gen[cid]);
     const hiddenKids = g.children[id].length - kids.length;
@@ -438,7 +485,7 @@
     };
     filter.addEventListener("input", paintKids);
     paintKids();
-    if (hiddenKids) note(childSlot.body, hiddenKids + " generated children are hidden.");
+    if (hiddenKids) note(childSlot.body, hiddenKids + (hiddenKids === 1 ? " generated child hidden" : " generated children hidden"), "Turn on “Show generated classes” to list them.");
 
     const eqSlot = section("Equivalents");
     if (g.equiv[id].length) fillLinks(eqSlot.body, g.equiv[id]);
@@ -448,9 +495,11 @@
       if (token !== panelToken) return;
       if (rec && rec.s) kicker.textContent = moduleName + " · " + rec.s;
       if (!rec || !rec.d) {
-        defSlot.body.textContent = "No equivalent-class expression is published for this concept. It is carried by its parents and by any sanctions below.";
+        defSlot.body.textContent = "None published.";
         defSlot.body.className = "muted";
         defSlot.body.dataset.raw = "";
+        const defHeading = defSlot.el.querySelector("h3");
+        if (!defHeading.querySelector(".info")) defHeading.append(infoButton("No equivalent-class expression is published for this concept. It is carried by its parents and by any sanctions below."));
       } else {
         defSlot.body.className = "def";
         defSlot.body.dataset.raw = rec.d;
@@ -500,10 +549,11 @@
     });
   }
 
-  function section(heading) {
+  function section(heading, info) {
     const el = document.createElement("section");
     const h = document.createElement("h3");
-    h.textContent = heading;
+    h.append(document.createTextNode(heading));
+    if (info) h.append(infoButton(info));
     const body = document.createElement("div");
     el.append(h, body);
     panel.append(el);
@@ -536,10 +586,11 @@
     }
   }
 
-  function note(container, text) {
+  function note(container, text, info) {
     const p = document.createElement("p");
-    p.className = "muted";
-    p.textContent = text;
+    p.className = "muted note-line";
+    p.append(document.createTextNode(text));
+    if (info) p.append(infoButton(info));
     container.append(p);
   }
 
@@ -592,7 +643,9 @@
     hideTip();
   });
   document.addEventListener("pointerdown", (event) => {
-    if ((event.pointerType || "mouse") === "mouse") return;
+    const touch = (event.pointerType || "mouse") !== "mouse";
+    if (touch && !(event.target.closest && event.target.closest(".info, #info-pop"))) hideInfo();
+    if (!touch) return;
     if (event.target.closest && event.target.closest(".node, #tip")) return;
     hideTip();
   });

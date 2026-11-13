@@ -17,9 +17,15 @@
     return h.formatHex();
   });
 
-  function ancestorSet(parents, focus) {
-    const anc = new Set([focus]);
-    const stack = [focus];
+  function ancestorSet(parents, seeds) {
+    const list = Array.isArray(seeds) ? seeds : [seeds];
+    const anc = new Set();
+    const stack = [];
+    for (const seed of list) {
+      if (anc.has(seed)) continue;
+      anc.add(seed);
+      stack.push(seed);
+    }
     while (stack.length) {
       const node = stack.pop();
       for (const parent of parents[node]) {
@@ -106,27 +112,17 @@
 
   function buildView(graph, focus, state) {
     const { parents, children, gen, names } = graph;
-    const chosen = (state.relEdges || []).filter((edge) => state.rels && state.rels.has(edge.prop));
-    const relEdges = [];
-    const anc = ancestorSet(parents, focus);
-    for (const edge of chosen) {
-      if (relEdges.length >= 8) break;
-      const extra = ancestorSet(parents, edge.target);
-      if (anc.size + extra.size > 200 && relEdges.length) continue;
-      for (const id of extra) anc.add(id);
-      relEdges.push(edge);
-    }
+    const relEdges = (state.relEdges || []).filter((edge) => state.rels && state.rels.has(edge.prop));
     const seeds = [focus, ...relEdges.map((edge) => edge.target)];
+    const anc = ancestorSet(parents, seeds);
+    const seedSet = new Set(seeds);
     const hidden = new Set();
     if (!state.showGen) {
-      for (const id of anc) if (!seeds.includes(id) && gen[id]) hidden.add(id);
+      for (const id of anc) if (!seedSet.has(id) && gen[id]) hidden.add(id);
     }
     const vis = new Set([...anc].filter((id) => !hidden.has(id)));
     const parentOf = (id) => upsOf(parents, anc, hidden, id).filter((p) => vis.has(p));
-    let { keep, clusters } = clusterAncestors(seeds, vis, parentOf);
-    if (anc.size > 400 && !state.showGen) {
-      /* already hiding generated; nothing further */
-    }
+    let { keep, clusters, kids } = clusterAncestors(seeds, vis, parentOf);
     const clusteringOn = state.clustering !== false;
     const expanded = clusteringOn ? state.expanded : new Set();
     const inCollapsed = new Map();
@@ -218,9 +214,7 @@
       if (node.kind !== "cluster") continue;
       for (const id of node.members) {
         for (const parent of parentOf(id)) link(rep(parent), node.key, "anc");
-        for (const child of (clusterKids(parentOf, vis, id))) {
-          if (vis.has(child)) link(node.key, rep(child), "anc");
-        }
+        for (const child of kids.get(id) || []) link(node.key, rep(child), "anc");
       }
     }
     if (more) link("n" + focus, "more", "child");
@@ -237,20 +231,11 @@
       links,
       clusters,
       relLinks,
-      relOmitted: Math.max(0, chosen.length - relEdges.length),
       childHidden,
       ancestorCount: anc.size,
       visibleCount: vis.size,
       names,
     };
-  }
-
-  function clusterKids(parentOf, vis, id) {
-    const kids = [];
-    for (const other of vis) {
-      if (parentOf(other).includes(id)) kids.push(other);
-    }
-    return kids;
   }
 
   const measure = document.createElement("canvas").getContext("2d");
