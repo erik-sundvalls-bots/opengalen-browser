@@ -129,8 +129,6 @@ After that, the site is https://erik-sundvalls-bots.github.io/opengalen-browser/
 
 ## Contributing / Feedback
 
-Suggest an improvement or report a problem by opening an issue:
+[Suggest improvement/feature](https://github.com/erik-sundvalls-bots/opengalen-browser/issues/new).
 
-https://github.com/erik-sundvalls-bots/opengalen-browser/issues/new
-
-The new-issue chooser offers three templates: a bug report, a feature suggestion, and a data question (a concept, parent link, definition, or sanction that looks wrong). Include the concept’s `#concept=Name` address when the report is about one concept. Browser code is MIT. Terminology changes belong upstream of this browser: the graph is the published 2010 hierarchy, not a place to edit OpenGALEN itself.
+The new-issue chooser leads with that template. A bug report and a data question (a concept, parent link, definition, or sanction that looks wrong) follow it. Include the concept’s `#concept=Name` address when the note is about one concept. Browser code is MIT. Terminology changes belong upstream of this browser: the graph is the published 2010 hierarchy, not a place to edit OpenGALEN itself.

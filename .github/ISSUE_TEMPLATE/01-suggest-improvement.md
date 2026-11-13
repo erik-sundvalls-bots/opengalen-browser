@@ -1,5 +1,5 @@
 ---
-name: Feature suggestion
+name: Suggest improvement/feature
 about: An improvement to the browser
 title: ""
 ---
