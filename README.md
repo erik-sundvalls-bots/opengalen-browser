@@ -28,7 +28,7 @@ Acknowledgement, as GOSL requires at start-up and within the application:
 - See its neighbourhood as a Sugiyama DAG: ancestors up to the top, with chains of intermediate concepts collapsed into a dashed **+n** cluster, direct children, and optional siblings.
 - Click a concept to refocus. Click a **+n** pill to expand that cluster. Hover a cluster to read the hidden names.
 - Read the side panel: GRAIL-like definition, sanction level, sensible and grammatical role sanctions, GRAIL `topicNecessarily` lines where the original source has them, dissection rubric, parents, children and equivalents. The panel slides away to a narrow icon strip.
-- Switches beside the search box for generated classes (on at start), labels, and clustering. Siblings is a side-panel button. Zoom and fit sit at the upper right of the graph. Click the coloured background of an expanded cluster to collapse it.
+- Switches beside the search box for generated classes (on at start), labels, and clustering. Cluster-marking appears while clustering is on. Siblings is a side-panel button. Zoom and fit sit at the upper right of the graph. Click an expanded cluster’s area, not a node, to collapse it. With cluster-marking off that area is invisible.
 - Hide the long generated `…which…which…` class names, or show them. They are shown at start.
 - Permalink a concept with `#concept=Name`.
 - Repeat visits are cached in IndexedDB, including offline reuse of what has already been fetched.

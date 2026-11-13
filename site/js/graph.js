@@ -364,7 +364,9 @@
       const color = data.role === "child" ? "#c46b1a" : data.role === "sib" ? "#8a8175" : "#0f6e6b";
       if (data.cluster != null) {
         const col = pal[data.cluster % pal.length];
-        ng.append("circle").attr("r", 9).attr("fill", "none").attr("stroke", col).attr("stroke-width", 1.5).attr("stroke-dasharray", "2 2");
+        if (state.clustering !== false && state.marking !== false) {
+          ng.append("circle").attr("r", 9).attr("fill", "none").attr("stroke", col).attr("stroke-width", 1.5).attr("stroke-dasharray", "2 2");
+        }
         (clusterPts.get(data.cluster) || clusterPts.set(data.cluster, []).get(data.cluster)).push([x, y]);
       }
       const radius = data.role === "focus" ? 7 : data.role === "anc" && parentOfCount(graph, id) === 0 ? 6.5 : generated ? 3.4 : 4.6;
@@ -418,21 +420,27 @@
           .text(rel.prop);
       }
     }
+    const marking = state.clustering !== false && state.marking !== false;
     for (const [index, pts] of clusterPts) {
       const col = pal[index % pal.length];
       const hullPts = pts.length >= 3 ? d3.polygonHull(pts) : null;
-      const d = hullPts ? "M" + hullPts.join("L") + "Z" : pts.length === 2 ? `M${pts[0]} L${pts[1]}` : `M${pts[0]} l0.1,0`;
-      hull.append("path")
+      const path = hull.append("path")
         .attr("class", "cluster-hull")
-        .datum(index)
-        .attr("d", d)
-        .attr("fill", hullPts ? col : "none")
-        .attr("fill-opacity", .12)
-        .attr("stroke", col)
-        .attr("stroke-opacity", .2)
-        .attr("stroke-width", pts.length >= 2 ? 28 : 0)
-        .attr("stroke-linejoin", "round")
-        .attr("stroke-linecap", "round");
+        .datum(index);
+      if (hullPts) {
+        path.attr("d", "M" + hullPts.join("L") + "Z")
+          .attr("fill", col)
+          .attr("fill-opacity", marking ? .12 : 0)
+          .attr("stroke", "none");
+      } else {
+        const d = pts.length === 2 ? `M${pts[0]} L${pts[1]}` : `M${pts[0]} l0.1,0`;
+        path.attr("d", d)
+          .attr("fill", "none")
+          .attr("stroke", col)
+          .attr("stroke-opacity", marking ? .12 : 0)
+          .attr("stroke-width", 28)
+          .attr("stroke-linecap", "round");
+      }
     }
 
     view.dagNodes = dag;

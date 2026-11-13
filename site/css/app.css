@@ -59,6 +59,7 @@ h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; white-space: nowrap; }
   font-weight: 650;
   white-space: nowrap;
 }
+.switch-row[hidden] { display: none; }
 .switch {
   width: 32px;
   height: 18px;

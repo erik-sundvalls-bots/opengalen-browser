@@ -16,7 +16,7 @@
   document.head.appendChild(base);
 })();
 </script>
-<link rel="stylesheet" href="css/app.css?v=7">
+<link rel="stylesheet" href="css/app.css?v=8">
 </head>
 <body>
 <header class="topbar">
@@ -35,6 +35,9 @@
     </label>
     <label class="switch-row">Clustering
       <button type="button" id="tog-cluster" class="switch" role="switch" aria-checked="true" aria-label="Cluster intermediate ancestors" title="Cluster intermediate ancestors"></button>
+    </label>
+    <label class="switch-row" id="mark-row">Cluster-marking
+      <button type="button" id="tog-mark" class="switch" role="switch" aria-checked="true" aria-label="Shade expanded clusters" title="Shade expanded clusters"></button>
     </label>
   </div>
 </header>
@@ -90,8 +93,8 @@
   <p><b>Feedback.</b> <a href="https://github.com/erik-sundvalls-bots/opengalen-browser/issues/new">Suggest improvement/feature</a>.</p>
   <h3>Controls</h3>
   <ul>
-    <li><b>Generated</b>, <b>Labels</b>, and <b>Clustering</b> are switches beside the search box. Generated and Clustering are on at each start. Clustering off shows every ancestor as its own node. Siblings is a button in the side panel, off until you turn it on.</li>
-    <li>A dashed <b>+n</b> pill is a cluster of intermediate ancestors. Click the pill to expand it. Click the coloured background of an expanded cluster, not a node, to collapse that cluster again.</li>
+    <li><b>Generated</b>, <b>Labels</b>, and <b>Clustering</b> are switches beside the search box. Generated and Clustering are on at each start. Clustering off shows every ancestor as its own node. <b>Cluster-marking</b> sits beside Clustering and is on at each start; it is hidden while Clustering is off. Siblings is a button in the side panel, off until you turn it on.</li>
+    <li>A dashed <b>+n</b> pill is a cluster of intermediate ancestors. Click the pill to expand it. Click the shaded area of an expanded cluster, not a node, to collapse that cluster again. Cluster-marking off removes the shade and the dashed rings around expanded members. The pills stay, and a click on that same area, though nothing is drawn there, still collapses the cluster.</li>
     <li>Zoom in, zoom out, <b>1:1</b> and fit sit at the upper right of the graph. Drag the background to pan. The wheel pans. Ctrl or ⌘ and the wheel zoom.</li>
     <li>The side panel slides off to the right. The narrow strip keeps icon buttons: show the concept again, open this panel, show or hide the focus concept’s children, show or hide its siblings, ancestors only, and definition relationships. The same actions sit at the top of the open panel. The strip remembers whether it was open.</li>
     <li>With a mouse, hover a node for its name without changing focus, and hover a collapsed cluster to read the hidden names. A click refocuses. On a touch screen the first tap is that preview and the second tap on the same node refocuses or expands the cluster. The preview closes if you tap elsewhere, pan or zoom, change focus, tap its close mark, or leave it for a few seconds. While <b>Labels</b> is off, that preview also writes the names onto the node’s immediate parents, children and drawn relationship targets, and lists the same names in the preview, so a covered or crowded dot can still be read.</li>
@@ -105,10 +108,10 @@
   <button type="button" id="tip-x" aria-label="Close preview" hidden>×</button>
   <div id="tip-body"></div>
 </div>
-<script src="lib/d3.min.js?v=7"></script>
-<script src="lib/d3-dag.min.js?v=7"></script>
-<script src="js/data.js?v=7"></script>
-<script src="js/graph.js?v=7"></script>
-<script src="js/app.js?v=7"></script>
+<script src="lib/d3.min.js?v=8"></script>
+<script src="lib/d3-dag.min.js?v=8"></script>
+<script src="js/data.js?v=8"></script>
+<script src="js/graph.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
 </body>
 </html>

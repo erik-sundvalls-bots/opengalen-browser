@@ -35,7 +35,7 @@
   const suggest = document.getElementById("suggest");
   const panel = document.getElementById("panel-body");
   const tip = document.getElementById("tip");
-  const state = { showGen: true, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, expanded: new Set(), childExtra: 0, focus: 0, rels: new Set(), relEdges: [] };
+  const state = { showGen: true, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, marking: true, expanded: new Set(), childExtra: 0, focus: 0, rels: new Set(), relEdges: [] };
   let model = null;
   let activeSuggest = -1;
   let panelToken = 0;
@@ -727,10 +727,22 @@
       state[key] = !state[key];
       sync();
       if (key === "showGen") state.childExtra = 0;
-      if (key === "clustering") state.expanded = new Set();
+      if (key === "clustering") {
+        state.expanded = new Set();
+        syncMarking();
+      }
       draw();
       fillPanel(state.focus);
     });
+  }
+
+  function syncMarking() {
+    const row = document.getElementById("mark-row");
+    const button = document.getElementById("tog-mark");
+    const on = state.clustering !== false;
+    row.hidden = !on;
+    button.disabled = !on;
+    button.setAttribute("aria-checked", state.marking !== false ? "true" : "false");
   }
 
   function paintSuggest(ids) {
@@ -799,6 +811,8 @@
   wireSwitch("tog-gen", "showGen");
   wireSwitch("tog-labels", "labels");
   wireSwitch("tog-cluster", "clustering");
+  wireSwitch("tog-mark", "marking");
+  syncMarking();
 
   let resizeTimer = 0;
   addEventListener("resize", () => {
