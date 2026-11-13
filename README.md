@@ -20,7 +20,7 @@ The source zips are unmodified. `build/og8_extract.py` only repackages them: sta
 
 Acknowledgement, as GOSL requires at start-up and within the application:
 
-> This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org). (now mirrored at https://opengalen.eggbird.eu/, contact [eh@eggbird.eu](mailto:eh@eggbird.eu), and archived at the Internet Archive: https://web.archive.org/web/*/opengalen.org)
+> This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org). (now mirrored at [https://opengalen.eggbird.eu/](https://opengalen.eggbird.eu/), and archived at the Internet Archive: [https://web.archive.org/web/20220308122743/https://opengalen.org/](https://web.archive.org/web/20220308122743/https://opengalen.org/))
 
 ## What you can do in the browser
 

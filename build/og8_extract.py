@@ -1088,8 +1088,8 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
             "This product uses the OpenGALEN Clinical Terminology, Copyright the "
             "Universities of Manchester and Nijmegen, licensed through OpenGALEN "
             "(www.opengalen.org). "
-            "(now mirrored at https://opengalen.eggbird.eu/, contact mailto:eh@eggbird.eu, "
-            "and archived at the Internet Archive: https://web.archive.org/web/*/opengalen.org)"
+            "(now mirrored at https://opengalen.eggbird.eu/, "
+            "and archived at the Internet Archive: https://web.archive.org/web/20220308122743/https://opengalen.org/)"
         ),
         "counts": {
             "concepts": n,

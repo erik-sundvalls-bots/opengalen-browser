@@ -7,8 +7,8 @@ unpacked and the release is easiest to keep intact.
 
 | File | Origin |
 |---|---|
-| `opengalen8-owl-sources.zip` | https://opengalen.eggbird.eu/download/opengalen8-owl-sources.zip |
-| `opengalen8-ascii-sources.zip` | https://opengalen.eggbird.eu/download/opengalen8-ascii-sources.zip |
+| `opengalen8-owl-sources.zip` | [https://opengalen.eggbird.eu/download/opengalen8-owl-sources.zip](https://opengalen.eggbird.eu/download/opengalen8-owl-sources.zip) |
+| `opengalen8-ascii-sources.zip` | [https://opengalen.eggbird.eu/download/opengalen8-ascii-sources.zip](https://opengalen.eggbird.eu/download/opengalen8-ascii-sources.zip) |
 | `gosl.html` | `OpenGALEN8/gosl.html` extracted from the ascii archive (identical copy is also inside the OWL archive) |
 
 SHA-256 checksums are in `SHA256SUMS`. Downloaded 2026-11-12.
