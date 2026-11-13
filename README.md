@@ -93,7 +93,7 @@ Gzipped artefacts from the last build:
 | `labels.json.gz` | 41,921 |
 | 246 definition shards | 3,114,691 |
 | `props.json.gz` plus relationship shards | 444,467 |
-| vendored d3 + d3-dag | about 375,000 |
+| `site/lib/` d3 + d3-dag | about 375,000 |
 
 The first view fetches the graph, the search index, the labels and `meta.json`: about **6.3 MB** on the wire. Definition shards, and the relationship shards for non-is-a roles, load when a concept is opened. The relationship extract is 149,129 edges on 106,275 concepts in 52 property groups, and it is not part of the first load. On a local server the page was interactive in about **0.6 s**, of which the 6 MB download was a few tens of milliseconds, so building the indexes and the first Sugiyama layout is about half a second once the bytes have arrived. Repeat visits read those files from IndexedDB.
 

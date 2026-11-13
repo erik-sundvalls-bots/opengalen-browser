@@ -1,7 +1,8 @@
-# Vendored libraries
+# Libraries
 
-Runtime pages load these files from this directory. They are not fetched
-from a CDN.
+Runtime pages load these files from `site/lib/`. They are not fetched
+from a CDN. The directory is named `lib` so a Jekyll config that
+excludes `vendor` still publishes the scripts.
 
 | File | Version | Licence |
 |---|---|---|
