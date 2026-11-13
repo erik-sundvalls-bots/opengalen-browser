@@ -126,3 +126,11 @@ That create call needs a permission this repository's automation token does not 
 3. Re-run the latest **Deploy GitHub Pages** workflow, or push again.
 
 After that, the site is https://erik-sundvalls-bots.github.io/opengalen-browser/ . The workflow itself is already on `main`.
+
+## Contributing / Feedback
+
+Suggest an improvement or report a problem by opening an issue:
+
+https://github.com/erik-sundvalls-bots/opengalen-browser/issues/new
+
+The new-issue chooser offers three templates: a bug report, a feature suggestion, and a data question (a concept, parent link, definition, or sanction that looks wrong). Include the concept’s `#concept=Name` address when the report is about one concept. Browser code is MIT. Terminology changes belong upstream of this browser: the graph is the published 2010 hierarchy, not a place to edit OpenGALEN itself.

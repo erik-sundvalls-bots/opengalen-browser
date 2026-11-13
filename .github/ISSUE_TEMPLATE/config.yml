@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: OpenGALEN browser
+    url: https://erik-sundvalls-bots.github.io/opengalen-browser/
+    about: The running graph browser
