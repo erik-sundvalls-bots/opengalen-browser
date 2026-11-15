@@ -522,7 +522,7 @@
     official.className = "official";
     official.innerHTML = "<code>" + escapeHtml(name) + "</code>";
     panel.append(kicker, title, official);
-    const relSlot = section("Relationships", "Dashed edges are definition roles. The same colour on a sanction, or in the GRAIL source, names that role but is not drawn: a sanction says what is allowed, and a definition link says what this concept has. Every selected target is climbed by is-a to the root, and clustering folds the shared ancestors. A nested filler is one edge to its genus; the nesting stays in the definition text.");
+    const relSlot = section("Relationships", "Dashed arrows are definition roles, pointing at the filler. Is-a links have no arrowheads. The same colour on a sanction, or in the GRAIL source, names that role but is not drawn: a sanction says what is allowed, and a definition link says what this concept has. Every selected target is climbed by is-a to the root, and clustering folds the shared ancestors. A nested filler is one edge to its genus; the nesting stays in the definition text.");
     relSlot.el.id = "rel-section";
     relSlot.body.id = "rel-box";
     relSlot.body.textContent = "Loading definition relationships…";
