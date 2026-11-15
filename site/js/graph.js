@@ -252,6 +252,93 @@
     return [text.slice(0, at).trim(), second.length > max ? second.slice(0, max - 1) + "…" : second];
   }
 
+
+  // Definition-role edges are ObjectSomeValuesFrom restrictions from the
+  // focused concept to a filler. Inverse attribute names (isLocationOf, …)
+  // are still outgoing roles of this concept, not a second head on the same
+  // arc. The browser never draws a bidirectional pair as one edge, so every
+  // rel-edge gets a single arrowhead at the filler. Is-a links (anc, child,
+  // sib) do not: ancestors already sit upwards.
+  function nodeGlyph(data, graph) {
+    if (data.kind === "cluster" || data.kind === "more") {
+      return { kind: "rect", hw: data.w / 2, hh: 9 };
+    }
+    const generated = graph.gen[data.concept];
+    const r = data.role === "focus" ? 7
+      : data.role === "anc" && parentOfCount(graph, data.concept) === 0 ? 6.5
+      : generated ? 3.4
+      : 4.6;
+    return { kind: "circle", r, generated };
+  }
+
+  function glyphPad(glyph, from, toward) {
+    const dx = toward[0] - from[0];
+    const dy = toward[1] - from[1];
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+    const stroke = 1.2;
+    if (glyph.kind === "rect") {
+      const tx = glyph.hw / Math.max(Math.abs(ux), 1e-9);
+      const ty = glyph.hh / Math.max(Math.abs(uy), 1e-9);
+      return Math.min(tx, ty) + stroke;
+    }
+    return glyph.r + stroke;
+  }
+
+  function quadPoint(p0, c, p2, t) {
+    const u = 1 - t;
+    return [
+      u * u * p0[0] + 2 * u * t * c[0] + t * t * p2[0],
+      u * u * p0[1] + 2 * u * t * c[1] + t * t * p2[1],
+    ];
+  }
+
+  function trimQuadratic(p0, c, p2, startPad, endPad) {
+    const pt = (t) => quadPoint(p0, c, p2, t);
+    const dist = (t, origin) => {
+      const p = pt(t);
+      return Math.hypot(p[0] - origin[0], p[1] - origin[1]);
+    };
+    const span = Math.hypot(p2[0] - p0[0], p2[1] - p0[1]);
+    if (span < startPad + endPad + 4) {
+      const scale = Math.max(0.15, span / (startPad + endPad + 4));
+      startPad *= scale;
+      endPad *= scale;
+    }
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      if (dist(mid, p0) < startPad) lo = mid;
+      else hi = mid;
+    }
+    const t0 = hi;
+    lo = 0;
+    hi = 1;
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      if (dist(mid, p2) < endPad) hi = mid;
+      else lo = mid;
+    }
+    const t1 = lo;
+    if (!(t1 > t0)) return { start: p0, mid: c, end: p2 };
+    return { start: pt(t0), mid: c, end: pt(t1) };
+  }
+
+  function pointAlongQuad(start, mid, end, back) {
+    const distEnd = (t) => {
+      const p = quadPoint(start, mid, end, t);
+      return Math.hypot(p[0] - end[0], p[1] - end[1]);
+    };
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 20; i++) {
+      const t = (lo + hi) / 2;
+      if (distEnd(t) < back) hi = t;
+      else lo = t;
+    }
+    return quadPoint(start, mid, end, lo);
+  }
+
   function draw(graph, focus, state, stage) {
     const view = buildView(graph, focus, state);
     const svg = d3.select("#g");
@@ -360,7 +447,8 @@
         continue;
       }
       const id = data.concept;
-      const generated = graph.gen[id];
+      const glyph = nodeGlyph(data, graph);
+      const generated = glyph.generated;
       const color = data.role === "child" ? "#c46b1a" : data.role === "sib" ? "#8a8175" : "#0f6e6b";
       if (data.cluster != null) {
         const col = pal[data.cluster % pal.length];
@@ -369,9 +457,8 @@
         }
         (clusterPts.get(data.cluster) || clusterPts.set(data.cluster, []).get(data.cluster)).push([x, y]);
       }
-      const radius = data.role === "focus" ? 7 : data.role === "anc" && parentOfCount(graph, id) === 0 ? 6.5 : generated ? 3.4 : 4.6;
       ng.append("circle")
-        .attr("r", radius)
+        .attr("r", glyph.r)
         .attr("fill", data.role === "focus" ? color : "#fffdf8")
         .attr("stroke", color)
         .attr("stroke-width", data.role === "focus" ? 2 : 1.5)
@@ -390,23 +477,64 @@
         });
       }
     }
+    const defs = svg.append("defs");
+    const markerIds = new Set();
+    function relMarker(color) {
+      const id = "og-rel-arrow-" + String(color).replace(/[^A-Fa-f0-9]/g, "");
+      if (!markerIds.has(id)) {
+        markerIds.add(id);
+        defs.append("marker")
+          .attr("id", id)
+          .attr("viewBox", "0 0 10 8")
+          .attr("refX", 10)
+          .attr("refY", 4)
+          .attr("markerWidth", 10)
+          .attr("markerHeight", 8)
+          .attr("markerUnits", "userSpaceOnUse")
+          .attr("orient", "auto")
+          .append("path")
+          .attr("d", "M0,0.6 L10,4 L0,7.4 Z")
+          .attr("fill", color);
+      }
+      return "url(#" + id + ")";
+    }
+    const byKeyDrawn = new Map();
+    for (const node of dag) byKeyDrawn.set(node.data.key, node.data);
     for (const rel of view.relLinks || []) {
       const a = pos.get(rel.source);
       const b = pos.get(rel.target);
       if (!a || !b) continue;
       const mx = (a[0] + b[0]) / 2 + (a[0] <= b[0] ? 36 : -36);
       const my = (a[1] + b[1]) / 2;
-      relG.append("path")
+      const mid = [mx, my];
+      const src = byKeyDrawn.get(rel.source);
+      const tgt = byKeyDrawn.get(rel.target);
+      const startPad = src ? glyphPad(nodeGlyph(src, graph), a, mid) : 6;
+      const endPad = tgt ? glyphPad(nodeGlyph(tgt, graph), b, mid) : 6;
+      const trimmed = trimQuadratic(a, mid, b, startPad, endPad);
+      const group = relG.append("g")
         .attr("class", "rel-edge")
-        .attr("d", `M${a[0]},${a[1]} Q${mx},${my} ${b[0]},${b[1]}`)
+        .datum(rel);
+      group.append("path")
+        .attr("class", "rel-edge-line")
+        .attr("d", `M${trimmed.start[0]},${trimmed.start[1]} Q${trimmed.mid[0]},${trimmed.mid[1]} ${trimmed.end[0]},${trimmed.end[1]}`)
         .attr("fill", "none")
         .attr("stroke", rel.color)
         .attr("stroke-width", 1.8)
         .attr("stroke-dasharray", "7 4")
-        .attr("stroke-linecap", "round")
-        .datum(rel);
+        .attr("stroke-linecap", "round");
+      const capFrom = pointAlongQuad(trimmed.start, trimmed.mid, trimmed.end, 8);
+      group.append("path")
+        .attr("class", "rel-edge-head")
+        .attr("d", `M${capFrom[0]},${capFrom[1]} L${trimmed.end[0]},${trimmed.end[1]}`)
+        .attr("fill", "none")
+        .attr("stroke", rel.color)
+        .attr("stroke-width", 1.8)
+        .attr("stroke-linecap", "butt")
+        .attr("marker-end", relMarker(rel.color))
+        .attr("pointer-events", "none");
       if (state.labels) {
-        relG.append("text")
+        group.append("text")
           .attr("class", "rel-label")
           .attr("x", mx)
           .attr("y", my)
