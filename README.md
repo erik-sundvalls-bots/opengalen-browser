@@ -75,7 +75,7 @@ The binary layouts are documented at the top of `build/og8_extract.py`.
 | Published figure | This build |
 |---|---|
 | 164,626 class declarations | 164,626 `Declaration(Class …)` lines, naming **125,389** unique classes. The OWL release notes say duplicate declarations are translation artefacts. |
-| 246,576 parent links | 246,576 `implies` lines, 244,980 unique pairs, 436 self-links ignored. The graph stores **244,972** links after dropping 8 cycles that are in the dump itself. |
+| 246,576 parent links | 246,576 `implies` lines, 244,980 unique pairs, 436 self-links ignored. Two classifier-artefact pairs (`BodyStructure` under `Adenoma`, and under Adenoma's defining which-class) are removed; they are not in the no-chains or CRM-only dumps. The graph stores **244,973** links after dropping the 5 remaining surgical cycles. |
 | 1,664 `equivalent` lines | 1,664 |
 | 154,509 equivalent-class axioms, 54,285 subclass axioms | both exact |
 | `PulmonaryAtresiaWithVentricularSeptalDefect` implies `PhenomenonwhichinvolvesHeart` | true as an **ancestor**, and it is not an asserted `SubClassOf`. The direct dump parent of `PulmonaryAtresia` includes `CongenitalPathologywhichinvolvesHeartChamber`. |
@@ -88,7 +88,7 @@ Gzipped artefacts from the last build:
 
 | File | Bytes |
 |---|---|
-| `graph.bin.gz` | 2,719,657 |
+| `graph.bin.gz` | 2,719,672 |
 | `search.bin.gz` | 3,122,406 |
 | `labels.json.gz` | 41,921 |
 | 246 definition shards | 3,114,691 |
@@ -100,8 +100,9 @@ The first view fetches the graph, the search index, the labels and `meta.json`: 
 ## Known limits
 
 - There is no in-browser reasoner. The hierarchy is the 2010 with-property-chains dump.
-- Eight `implies` cycles in that dump are dropped so the picture is a DAG. They are listed in `build/VALIDATION.md`. Mostly they are very long surgical-procedure names that imply an even longer sibling expression, plus three short `BodyStructure` loops.
-- A neighbourhood with many parents (Heart has 79 ancestors) is dense. Labels can overlap. The on-canvas zoom tools and turning labels off are the relief valves. `decrossOpt` is exponential on these DAGs, so the layout uses `decrossTwoLayer`. The vertical gap is the V7 value of 46; the horizontal gap is wider because GALEN names are long.
+- Two edges in the with-chains dump are classifier artefacts, not told axioms: `BodyStructure` implies `Adenoma` (lines 32231–32237) and `BodyStructure` implies Adenoma's defining which-class (lines 33133–33137). They are absent from the no-chains and CRM-only dumps and are removed before cycle breaking. Without that filter about 10,886 concepts, including Heart, Hand and Femur, had Adenoma as an ancestor. `BodyStructure`'s only stored parent is `OrganicSolidStructure`.
+- Five `implies` cycles remain after that filter and are dropped so the picture is a DAG. They are long surgical-procedure names listed in `build/VALIDATION.md`. Five narrower generated-class inversions (HeartBeat, SurgicalAblating, and tachycardia wrappers) are logged there and kept.
+- A neighbourhood with many parents (Heart has 52 ancestors) is dense. Labels can overlap. The on-canvas zoom tools and turning labels off are the relief valves. `decrossOpt` is exponential on these DAGs, so the layout uses `decrossTwoLayer`. The vertical gap is the V7 value of 46; the horizontal gap is wider because GALEN names are long.
 - A concept with no OWL equivalent-class expression is shown as primitive: parents, children and sanctions. The encircled i beside Definition says so. `Anaemia` is an example that does have a GRAIL-like definition.
 - Definition roles are optional dashed edges, off until a kind is switched on. Every selected target is climbed by is-a to the root, and clustering folds the ancestors those targets share. The widest such neighbourhood in this build is 195 ancestors. With clustering on it lays out in a few tenths of a second; with clustering off that same picture takes several seconds. A nested filler is one edge to its genus (the last named class in the intersection) or to the named class when the filler is a single class. Roles inside that filler, and sanctions, stay in the panel and are not drawn. Dissection and application-metadata roles are left out of the shards.
 - `topicNecessarily` is read from the GRAIL sources when the line is a simple subject-qualifier-role-object statement. The OWL file itself only distinguishes sensible (`S-SANCTION-`) and grammatical (`G-SANCTION-`) sanctions.

@@ -1,7 +1,7 @@
 {
   "name": "OpenGALEN 8",
   "dump": "OpenGALEN8_WithPropertyChains_CRM+Diseases+SurgicalProcedures+DrugOntology.dump",
-  "built": "2026-11-13T06:27:47Z",
+  "built": "2026-11-15T08:31:17Z",
   "shardSize": 512,
   "modules": [
     "Unspecified",
@@ -39,13 +39,16 @@
     "declaredClasses": 125389,
     "declarationLines": 164626,
     "impliesLines": 246576,
-    "uniqueParentLinks": 244972,
+    "uniqueDumpPairs": 244980,
+    "classifierArtefactsRemoved": 2,
+    "cyclesDropped": 5,
+    "uniqueParentLinks": 244973,
     "selfImplies": 436,
     "equivalentLines": 1664,
     "equivalentPairsInDump": 1664,
     "conceptsWithEquivalents": 8565,
     "generated": 90775,
-    "roots": 4817,
+    "roots": 4816,
     "definitions": 115552,
     "rubrics": 39690,
     "rubricLines": 97170,
@@ -73,7 +76,7 @@
     "relationships": "r/{shard}.json.gz"
   },
   "bytes": {
-    "graph": 2719657,
+    "graph": 2719672,
     "search": 3122406,
     "labels": 41921,
     "definitions": 3114691,
@@ -119,7 +122,35 @@
     },
     {
       "ok": true,
-      "label": "known cyclic implies edges dropped: 8 (expected 8)"
+      "label": "classifier artefacts removed: 2 (expected 2)"
+    },
+    {
+      "ok": true,
+      "label": "BodyStructure parents == {OrganicSolidStructure} (was Adenoma plus its which-class)"
+    },
+    {
+      "ok": true,
+      "label": "Heart does not have ancestor Adenoma"
+    },
+    {
+      "ok": true,
+      "label": "Hand does not have ancestor Adenoma"
+    },
+    {
+      "ok": true,
+      "label": "Femur does not have ancestor Adenoma"
+    },
+    {
+      "ok": true,
+      "label": "Thumb does not have ancestor Adenoma"
+    },
+    {
+      "ok": true,
+      "label": "VillousAdenoma still has ancestor Adenoma"
+    },
+    {
+      "ok": true,
+      "label": "known cyclic implies edges dropped: 5 (expected 5)"
     }
   ],
   "parseNotes": {

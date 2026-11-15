@@ -70,6 +70,34 @@ EXPECT_EQ_AXIOMS = 154_509
 EXPECT_SUB = 54_285
 SPOT_CHILD = "PulmonaryAtresiaWithVentricularSeptalDefect"
 SPOT_PARENT = "PhenomenonwhichinvolvesHeart"
+# With-chains full dump only. Not told GRAIL/OWL axioms, and absent from the
+# no-chains full dump and the CRM-only dump. Lines 32231–32237 repeat the
+# Adenoma edge; lines 33133–33137 repeat the which-class that defines Adenoma
+# (Adenoma implies that class at line 32191).
+CLASSIFIER_ARTEFACTS = (
+    ("BodyStructure", "Adenoma"),
+    (
+        "BodyStructure",
+        "PathologicalBodyStructurewhichhasUniqueAssociatedProcessNeoplasticProcesswhichactsSpecificallyOnTissueCell",
+    ),
+)
+# Narrower generated parents that still look inverted. Logged, not removed.
+# The HeartBeat and tachycardia edges are in the with-chains dumps and absent
+# from the no-chains full dump. The SurgicalAblating edge is also in the
+# no-chains dump, so it is only recorded here.
+SUSPECTED_INVERSIONS = (
+    ("HeartBeat", "PhenomenonwhichinvolvesSubstance"),
+    ("SurgicalAblating", "SolidRemovingProcesswhichplaysClinicalRoleSurgicalRole"),
+    ("Tachycardia", "TemporalFeaturewhichinvolvesHearthasPathologicalStatuspathological"),
+    (
+        "SupraventricularTachycardia",
+        "TemporalFeaturewhichinvolvesDepolarisationwhichisSpecificFunctionOfAtrialStructurehasPathologicalStatuspathological",
+    ),
+    (
+        "SinusTachycardia",
+        "TemporalFeaturewhichinvolvesSinoAtrialNodeDepolarisationhasPathologicalStatuspathological",
+    ),
+)
 SHARD = 512
 MOD_NAME = ["Unspecified", "CRM", "Disease", "Procedure", "Drug"]
 STOP = {"which", "and", "the", "of"}
@@ -410,6 +438,22 @@ def load_dump(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
                 if a != b:
                     equiv.add((a, b) if a < b else (b, a))
     return edges, equiv, n_implies, n_equiv, self_implies
+
+
+def drop_classifier_artefacts(edges: set[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Remove known classifier artefacts before cycle breaking.
+
+    Keeping BodyStructure ⊑ Adenoma and BodyStructure ⊑ Adenoma's defining
+    which-class makes break_cycles retain those two edges and drop three
+    legitimate BodyStructure parent edges. Ordinary structures then inherit
+    Adenoma. The with-chains full dump is still the hierarchy we publish.
+    """
+    removed = []
+    for pair in CLASSIFIER_ARTEFACTS:
+        if pair in edges:
+            edges.remove(pair)
+            removed.append(pair)
+    return removed
 
 
 def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
@@ -786,7 +830,16 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
     print("reading hierarchy dump", flush=True)
     with zipfile.ZipFile(owl_path) as owl_zip:
         edges, equiv_pairs, n_implies, n_equiv_lines, self_implies = load_dump(owl_zip, bag)
-        print(f"  implies {n_implies} unique {len(edges)} equiv lines {n_equiv_lines}", flush=True)
+        n_unique_dump = len(edges)
+        artefacts = drop_classifier_artefacts(edges)
+        print(f"  implies {n_implies} unique {n_unique_dump} equiv lines {n_equiv_lines}", flush=True)
+        print(
+            f"  filtered {len(artefacts)} classifier-artefact pairs "
+            "(BodyStructure⊑Adenoma at dump lines 32231–32237; "
+            "BodyStructure⊑Adenoma's defining which-class at lines 33133–33137; "
+            "absent from the no-chains and CRM-only dumps)",
+            flush=True,
+        )
         print("reading OWL-F", flush=True)
         owl = load_owl(owl_zip, bag)
     print("reading GRAIL", flush=True)
@@ -817,6 +870,13 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
     removed = break_cycles(parents)
     if removed:
         print(f"removed {len(removed)} cycle back-edges", flush=True)
+    print("suspected narrower generated-class inversions kept (not fixed):", flush=True)
+    suspected_kept = []
+    for child, parent in SUSPECTED_INVERSIONS:
+        present = child in id_of and parent in id_of and id_of[parent] in parents[id_of[child]]
+        print(f"  {'kept' if present else 'absent'} {child} implies {parent}", flush=True)
+        if present:
+            suspected_kept.append((child, parent))
 
     children: list[list[int]] = [[] for _ in range(n)]
     for i, plist in enumerate(parents):
@@ -1071,10 +1131,18 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
         f"{SPOT_CHILD} has ancestor {SPOT_PARENT} (inferred, not a direct dump line)",
     )
     check(not owl["spot_asserted"], f"{SPOT_CHILD} / {SPOT_PARENT} is not an asserted SubClassOf")
-    # The published dump contains 8 implies-cycles. They are dropped so the
-    # browser can lay the neighbourhood out as a DAG. A change in the count
-    # means the dump parse or the cycle finder moved.
-    check(len(removed) == 8, f"known cyclic implies edges dropped: {len(removed)} (expected 8)")
+    # After the two BodyStructure artefacts are removed, the only cycles left
+    # in the with-chains dump are five SurgicalDeed loops.
+    check(len(artefacts) == 2, f"classifier artefacts removed: {len(artefacts)} (expected 2)")
+    bs_parents = {names[p] for p in parents[id_of["BodyStructure"]]}
+    check(
+        bs_parents == {"OrganicSolidStructure"},
+        "BodyStructure parents == {OrganicSolidStructure} (was Adenoma plus its which-class)",
+    )
+    for innocent in ("Heart", "Hand", "Femur", "Thumb"):
+        check(not reaches(innocent, "Adenoma"), f"{innocent} does not have ancestor Adenoma")
+    check(reaches("VillousAdenoma", "Adenoma"), "VillousAdenoma still has ancestor Adenoma")
+    check(len(removed) == 5, f"known cyclic implies edges dropped: {len(removed)} (expected 5)")
 
     meta = {
         "name": "OpenGALEN 8",
@@ -1096,6 +1164,9 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
             "declaredClasses": len(owl["declared"]),
             "declarationLines": owl["n_decl_lines"],
             "impliesLines": n_implies,
+            "uniqueDumpPairs": n_unique_dump,
+            "classifierArtefactsRemoved": len(artefacts),
+            "cyclesDropped": len(removed),
             "uniqueParentLinks": sum(len(p) for p in parents),
             "selfImplies": self_implies,
             "equivalentLines": n_equiv_lines,
@@ -1192,12 +1263,26 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
         f"({len(owl['labels']):,} concepts).",
         "",
         "Parent links stored in the graph are unique. "
-        f"The dump has {n_implies:,} implies lines, {len(edges):,} unique pairs, and {self_implies:,} self-implies that are ignored. "
-        "Eight implies-cycles in the published dump are dropped so the neighbourhood can be drawn as a DAG:",
+        f"The dump has {n_implies:,} implies lines, {n_unique_dump:,} unique pairs, and {self_implies:,} self-implies that are ignored. "
+        "Two unique pairs are classifier artefacts in that with-chains dump only "
+        "(lines 32231–32237 `BodyStructure` implies `Adenoma`, and lines 33133–33137 "
+        "`BodyStructure` implies Adenoma's defining which-class "
+        "`PathologicalBodyStructurewhichhasUniqueAssociatedProcessNeoplasticProcesswhichactsSpecificallyOnTissueCell`). "
+        "They are not told GRAIL or OWL axioms and are absent from the no-chains full dump and the CRM-only dump, so they are removed before cycle breaking. "
+        "Five remaining implies-cycles, all long surgical-procedure names, are dropped so the neighbourhood can be drawn as a DAG:",
         "",
     ]
     for child, parent in removed_names:
         lines.append(f"- `{child}` implies `{parent}` (edge dropped)")
+    lines += [
+        "",
+        "Five narrower generated-class inversions are still in the graph and were not changed. "
+        "The HeartBeat and tachycardia edges are absent from the no-chains full dump. "
+        "The SurgicalAblating edge is present there too:",
+        "",
+    ]
+    for child, parent in suspected_kept:
+        lines.append(f"- `{child}` implies `{parent}` (kept)")
     lines += [
         "",
         f"`{SPOT_CHILD}` is not a direct child of `{SPOT_PARENT}` in the dump. "
