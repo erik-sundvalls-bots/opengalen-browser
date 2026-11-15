@@ -123,6 +123,51 @@ class GraphTests(unittest.TestCase):
         names = {self.g["name"](j) for j in ids}
         self.assertIn("Asthma", names)
 
+    def test_bodystructure_is_not_an_adenoma(self):
+        self.assertEqual(self.meta["counts"]["classifierArtefactsRemoved"], 2)
+        self.assertEqual(self.meta["counts"]["cyclesDropped"], 5)
+        wanted = {
+            "BodyStructure",
+            "OrganicSolidStructure",
+            "Adenoma",
+            "Heart",
+            "Hand",
+            "Femur",
+            "Thumb",
+            "VillousAdenoma",
+        }
+        index = {}
+        for i in range(self.g["n"]):
+            name = self.g["name"](i)
+            if name in wanted:
+                index[name] = i
+                if len(index) == len(wanted):
+                    break
+        offs, ids = self.g["par_off"], self.g["par_ids"]
+
+        def parent_names(i):
+            return {self.g["name"](p) for p in ids[offs[i] : offs[i + 1]]}
+
+        self.assertEqual(parent_names(index["BodyStructure"]), {"OrganicSolidStructure"})
+
+        def reaches(child, parent):
+            target = index[parent]
+            seen = set()
+            stack = list(ids[offs[index[child]] : offs[index[child] + 1]])
+            while stack:
+                node = stack.pop()
+                if node in seen:
+                    continue
+                seen.add(node)
+                if node == target:
+                    return True
+                stack.extend(ids[offs[node] : offs[node + 1]])
+            return False
+
+        for name in ("Heart", "Hand", "Femur", "Thumb"):
+            self.assertFalse(reaches(name, "Adenoma"), name)
+        self.assertTrue(reaches("VillousAdenoma", "Adenoma"))
+
     def test_anaemia_definition_is_grail_like(self):
         index = {}
         for i in range(self.g["n"]):
