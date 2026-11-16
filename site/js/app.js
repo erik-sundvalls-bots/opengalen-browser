@@ -11,7 +11,9 @@
   }
   document.getElementById("about-btn").addEventListener("click", openAbout);
   about.addEventListener("close", () => { if (model) draw(); });
-  openAbout();
+  // A permalink or query that already names a concept skips the automatic
+  // About dialog. A plain visit still opens it. The About button always can.
+  if (!requestedName()) openAbout();
 
   function setPanelOpen(open) {
     panelEl.classList.toggle("is-collapsed", !open);
@@ -51,7 +53,22 @@
 
   function hashName() {
     const match = /^#concept=(.*)$/.exec(location.hash);
-    return match ? decodeURIComponent(match[1]) : "";
+    if (!match || !match[1]) return "";
+    try { return decodeURIComponent(match[1]); } catch (err) { return match[1]; }
+  }
+
+  function queryName() {
+    try {
+      const value = new URLSearchParams(location.search).get("concept");
+      return value ? String(value).trim() : "";
+    } catch (err) {
+      return "";
+    }
+  }
+
+  /* Hash #concept=Name wins; otherwise ?concept=Name. Empty means a plain visit. */
+  function requestedName() {
+    return hashName() || queryName();
   }
 
   function go(name, push) {
@@ -915,9 +932,14 @@
       aboutCounts.textContent = counts.concepts.toLocaleString() + " concepts and "
         + counts.uniqueParentLinks.toLocaleString() + " parent links, from the with-property-chains hierarchy.";
     }
-    const named = hashName();
+    const named = requestedName();
     const start = named && model.graph.byName.has(named) ? named : model.meta.defaultConcept;
-    if (!named) history.replaceState(null, "", "#concept=" + encodeURIComponent(start));
+    if (!hashName() && start) {
+      const url = new URL(location.href);
+      url.searchParams.delete("concept");
+      const search = url.searchParams.toString();
+      history.replaceState(null, "", url.pathname + (search ? "?" + search : "") + "#concept=" + encodeURIComponent(start));
+    }
     showFocus(start);
   }).catch((err) => {
     setStatus(err.message || String(err));

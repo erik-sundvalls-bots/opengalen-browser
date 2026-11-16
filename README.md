@@ -31,7 +31,8 @@ Acknowledgement, as GOSL requires at start-up and within the application:
 - Equivalent names are one node. `#concept=Thumb` and `#concept=Pollux` show the same merged graph (parents, children, roles and the GRAIL snippet that hangs on either name), with a heading `Thumb = Pollux`. The address keeps the name you opened. Search still finds each name.
 - Switches beside the search box for generated classes (on at start), labels, and clustering. Cluster-marking appears while clustering is on. Siblings is a side-panel button. Zoom and fit sit at the upper right of the graph. Click an expanded cluster’s area, not a node, to collapse it. With cluster-marking off that area is invisible.
 - Hide the long generated `…which…which…` class names, or show them. They are shown at start.
-- Permalink a concept with `#concept=Name`. For an equivalence group the permalink may use any of the names.
+- Permalink a concept with `#concept=Name` (a `?concept=Name` query is accepted and rewritten to that hash). For an equivalence group the permalink may use any of the names.
+- The About and licence dialog opens automatically only on a plain visit, with no concept in the address. A URL that already names a concept, such as `#concept=Thumb`, goes straight to the graph. The About button in the side strip still opens the dialog.
 - Repeat visits are cached in IndexedDB, including offline reuse of what has already been fetched.
 
 Generated classes are real nodes in the published hierarchy (the OWL translation names anonymous expressions by concatenating them). A class is treated as generated when its name contains two or more `which` glue words, or one `which` and is at least 56 characters long. Shorter single-`which` names such as `PhenomenonwhichinvolvesHeart` stay visible, because they are the ordinary inferred parents.
