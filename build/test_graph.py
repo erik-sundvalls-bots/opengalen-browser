@@ -424,6 +424,57 @@ class GraphTests(unittest.TestCase):
         for _, _, target in parsed:
             self.assertIn(target, by_name)
 
+    def test_default_edge_selection_is_first_sixteen(self):
+        # The panel no longer hard-caps drawing at 16. It checks the first 16
+        # items by default; the user can tick more from the scrollable list.
+        # AbdominalCavity is the widest sanction list in this build (60).
+        cavity = None
+        for i in range(self.g["n"]):
+            if self.g["name"](i) == "AbdominalCavity":
+                cavity = i
+                break
+        self.assertIsNotNone(cavity)
+        shard = cavity // self.meta["shardSize"]
+        recs = json.loads(gzip.decompress((DATA / "d" / f"{shard:04d}.json.gz").read_bytes()))
+        phrases = recs[str(cavity)]["q"]
+        self.assertEqual(len(phrases), 60)
+        prefixes = (
+            "sensiblyAndTopicNecessarily",
+            "grammaticallyAndTopicNecessarily",
+            "grammaticallyAndSensibly",
+            "topicNecessarily",
+            "sensibly",
+            "grammatically",
+        )
+
+        def parse(phrase):
+            rest = phrase
+            for prefix in prefixes:
+                if rest.startswith(prefix + " "):
+                    rest = rest[len(prefix) + 1 :]
+                    break
+            role, target = rest.split(" ", 1)
+            return role, target
+
+        keys = []
+        seen = set()
+        for phrase in phrases:
+            role, target = parse(phrase)
+            # The browser keys by prop + numeric id; uniqueness of the
+            # official target name is enough to test the "first 16" rule.
+            key = role + ":" + target
+            if key in seen:
+                continue
+            seen.add(key)
+            keys.append(key)
+        self.assertEqual(len(keys), 60)
+        default = keys[:16]
+        self.assertEqual(len(default), 16)
+        self.assertEqual(default[0], "isStructuralComponentOf:Abdomen")
+        self.assertTrue(all(k.startswith("nonPartitivelyContains:") or k == default[0] for k in default))
+        self.assertEqual(default[-1], keys[15])
+        self.assertNotIn(keys[16], default)
+
     def test_anaemia_definition_is_grail_like(self):
         index = {}
         for i in range(self.g["n"]):
