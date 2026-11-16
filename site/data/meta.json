@@ -1,7 +1,7 @@
 {
   "name": "OpenGALEN 8",
   "dump": "OpenGALEN8_WithPropertyChains_CRM+Diseases+SurgicalProcedures+DrugOntology.dump",
-  "built": "2026-11-15T08:31:17Z",
+  "built": "2026-11-16T14:48:00Z",
   "shardSize": 512,
   "modules": [
     "Unspecified",
@@ -42,13 +42,14 @@
     "uniqueDumpPairs": 244980,
     "classifierArtefactsRemoved": 2,
     "cyclesDropped": 5,
-    "uniqueParentLinks": 244973,
+    "uniqueParentLinks": 244995,
+    "valueTypeParentsRestored": 22,
     "selfImplies": 436,
     "equivalentLines": 1664,
     "equivalentPairsInDump": 1664,
     "conceptsWithEquivalents": 8565,
     "generated": 90775,
-    "roots": 4816,
+    "roots": 4794,
     "definitions": 115552,
     "rubrics": 39690,
     "rubricLines": 97170,
@@ -76,7 +77,7 @@
     "relationships": "r/{shard}.json.gz"
   },
   "bytes": {
-    "graph": 2719672,
+    "graph": 2719741,
     "search": 3122406,
     "labels": 41921,
     "definitions": 3114691,
@@ -151,6 +152,22 @@
     {
       "ok": true,
       "label": "known cyclic implies edges dropped: 5 (expected 5)"
+    },
+    {
+      "ok": true,
+      "label": "first and OrdinalPositionValueType are in the graph"
+    },
+    {
+      "ok": true,
+      "label": "first has told OWL parent OrdinalPositionValueType (omitted from the dump)"
+    },
+    {
+      "ok": true,
+      "label": "first reaches SymbolicValueType via the restored value-type chain"
+    },
+    {
+      "ok": true,
+      "label": "told value-type parents restored: 22"
     }
   ],
   "parseNotes": {

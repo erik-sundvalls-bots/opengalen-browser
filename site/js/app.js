@@ -37,7 +37,7 @@
   const suggest = document.getElementById("suggest");
   const panel = document.getElementById("panel-body");
   const tip = document.getElementById("tip");
-  const state = { showGen: true, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, marking: true, expanded: new Set(), childExtra: 0, focus: 0, rels: new Set(), relEdges: [] };
+  const state = { showGen: true, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, marking: true, expanded: new Set(), childExtra: 0, focus: 0, rels: new Set(), relEdges: [], quals: new Set(), qualEdges: [] };
   let model = null;
   let activeSuggest = -1;
   let panelToken = 0;
@@ -47,6 +47,7 @@
   let tipTimer = 0;
   const tipBody = document.getElementById("tip-body");
   let focusRels = [];
+  let focusQuals = [];
   let relToken = 0;
 
   function setStatus(text) { status.textContent = text || ""; }
@@ -93,6 +94,8 @@
     hideInfo();
     state.focus = id;
     state.relEdges = [];
+    state.qualEdges = [];
+    focusQuals = [];
     document.title = OG.groupHeading(model.graph, id) + " · OpenGALEN 8";
     draw();
     fillPanel(id);
@@ -133,6 +136,7 @@
         OG.spaced(OG.groupHeading(g, state.focus))
         + " · " + lastView.ancestorCount + " ancestors"
         + (state.ancestorsOnly ? " · ancestors only" : state.children === false ? " · children hidden" : hiddenKids ? " · " + hiddenKids + " generated children hidden" : "")
+        + (lastView.qualHidden ? " · " + lastView.qualHidden + " sanctions not drawn" : "")
       );
     } catch (err) {
       setStatus("Could not lay out this neighbourhood. " + err.message);
@@ -191,7 +195,7 @@
         if (event.pointerType && event.pointerType !== "mouse") return;
         tip.classList.remove("is-touch");
         const target = model.graph.names[rel.targetId];
-        tipBody.innerHTML = "<b>" + escapeHtml(rel.prop) + "</b> → " + escapeHtml(OG.spaced(target));
+        tipBody.innerHTML = "<b>" + escapeHtml(edgeLabel(rel)) + "</b> → " + escapeHtml(OG.spaced(target));
         tip.hidden = false;
         moveTip(event);
       })
@@ -202,7 +206,7 @@
         if (pointerKind !== "mouse" && previewKey !== "rel:" + rel.prop + ":" + rel.targetId) {
           previewKey = "rel:" + rel.prop + ":" + rel.targetId;
           tip.classList.add("is-touch");
-          tipBody.innerHTML = "<b>" + escapeHtml(rel.prop) + "</b> → " + escapeHtml(OG.spaced(model.graph.names[rel.targetId]));
+          tipBody.innerHTML = "<b>" + escapeHtml(edgeLabel(rel)) + "</b> → " + escapeHtml(OG.spaced(model.graph.names[rel.targetId]));
           tip.hidden = false;
           moveTip(event);
           clearTimeout(tipTimer);
@@ -273,11 +277,11 @@
       children.push(name);
       labelKeys.add(key);
     }
-    for (const rel of view.relLinks || []) {
+    for (const rel of [...(view.relLinks || []), ...(view.qualLinks || [])]) {
       if (rel.source !== d.key) continue;
       const name = drawnName(view, rel.target);
       if (!name) continue;
-      rels.push(rel.prop + " → " + name);
+      rels.push((rel.kind === "qual" ? "sanction " : "") + rel.prop + " → " + name);
       labelKeys.add(rel.target);
     }
     return { parents, children, rels, labelKeys };
@@ -533,6 +537,81 @@
     paintRelSection();
   }
 
+  function applyQualSelection() {
+    state.qualEdges = focusQuals.filter((edge) => state.quals.has(edge.prop));
+    syncActions();
+    if (model) draw();
+    const section = document.getElementById("qual-section");
+    const body = section && section.querySelector("div");
+    if (body) paintQualSection(body, focusQuals);
+  }
+
+  function paintQualSection(container, edges) {
+    let box = document.getElementById("qual-box");
+    if (box) box.remove();
+    if (!edges || !edges.length) return;
+    box = document.createElement("div");
+    box.id = "qual-box";
+    const actions = document.createElement("div");
+    actions.className = "rel-actions";
+    const all = document.createElement("button");
+    all.type = "button";
+    all.textContent = "All";
+    const none = document.createElement("button");
+    none.type = "button";
+    none.textContent = "None";
+    all.addEventListener("click", () => { state.quals = new Set(focusQuals.map((edge) => edge.prop)); applyQualSelection(); });
+    none.addEventListener("click", () => { state.quals = new Set(); applyQualSelection(); });
+    actions.append(all, none);
+    box.append(actions);
+    const kinds = new Map();
+    for (const edge of edges) {
+      if (!kinds.has(edge.prop)) kinds.set(edge.prop, { color: edge.color, n: 0 });
+      kinds.get(edge.prop).n += 1;
+    }
+    const key = document.createElement("div");
+    key.className = "rel-key";
+    const color = OG.QUAL_COLOR || "#9a3d6b";
+    for (const [prop, info] of kinds) {
+      const row = document.createElement("div");
+      row.className = "rel-kind";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = prop + " (" + info.n + ")";
+      button.setAttribute("aria-pressed", state.quals.has(prop) ? "true" : "false");
+      button.style.background = state.quals.has(prop) ? color : "";
+      button.addEventListener("click", () => {
+        if (state.quals.has(prop)) state.quals.delete(prop);
+        else state.quals.add(prop);
+        applyQualSelection();
+      });
+      const sw = document.createElement("span");
+      sw.className = "rel-swatch qual-swatch";
+      sw.style.color = color;
+      row.append(button, sw);
+      box.append(row);
+      const legend = document.createElement("span");
+      legend.style.color = color;
+      const dash = document.createElement("i");
+      dash.className = "rel-swatch qual-swatch";
+      legend.append(dash, prop);
+      key.append(legend);
+    }
+    box.append(key);
+    const hidden = Math.max(0, (state.qualEdges || []).length - (OG.QUAL_CAP || 16));
+    if (hidden) {
+      const noteEl = document.createElement("p");
+      noteEl.className = "muted";
+      noteEl.textContent = hidden + " more sanction" + (hidden === 1 ? "" : "s") + " listed above, not drawn.";
+      box.append(noteEl);
+    }
+    // Keep the phrase list after the drawing controls.
+    const phrases = container.querySelector("ul.quals");
+    if (phrases) container.insertBefore(box, phrases);
+    else container.prepend(box);
+    syncActions();
+  }
+
   function mergeRecords(members, recs, g) {
     const canon = g.canon[members[0]];
     const order = [canon, ...members.filter((m) => m !== canon)];
@@ -601,7 +680,8 @@
     const defSlot = section("Definition");
     defSlot.body.id = "def-text";
     defSlot.body.textContent = "Loading the definition…";
-    const qualSlot = section("Sanctions and qualifiers");
+    const qualSlot = section("Sanctions and qualifiers", "Dotted arrows are sanctions and qualifiers: a role that is allowed for this concept, not a definition link. They use one colour, distinct from is-a and from the dashed definition-role arrows. Off until you turn a kind on, like Relationships. At most " + OG.QUAL_CAP + " are drawn; any more are listed here only.");
+    qualSlot.el.id = "qual-section";
     const rubricSlot = section("Dissection rubric");
     const grailSlot = section("GRAIL source");
     qualSlot.el.hidden = rubricSlot.el.hidden = grailSlot.el.hidden = true;
@@ -638,8 +718,27 @@
     paintKids();
     if (hiddenKids) note(childSlot.body, hiddenKids + (hiddenKids === 1 ? " generated child hidden" : " generated children hidden"), "Turn on “Show generated classes” to list them.");
 
-    if (members.length > 1) {
-      const namesSlot = section("Names", "These names are one concept in the classified hierarchy. The canonical name is the member with the most is-a relations (parents plus children); ties are broken alphabetically. Opening any name shows this same group; the address keeps the name you opened.");
+    const rawNames = OG.rawEquivalents(g, id);
+    if (OG.isBannedBag(g, id) && rawNames.length > 1) {
+      const namesSlot = section("Ambiguous names", "The classified dump marks these names as equivalent under BannedKnowledgeNames because the GRAIL names are ambiguous (ZootleWordle is the placeholder). They are not one clinical concept, so the browser keeps them as separate nodes.");
+      const p = document.createElement("p");
+      p.className = "muted";
+      p.textContent = "Banned or ambiguous knowledge name. The dump groups it with:";
+      const list = document.createElement("ul");
+      list.className = "links";
+      for (const mid of rawNames) {
+        if (mid === id) continue;
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = "#concept=" + encodeURIComponent(g.names[mid]);
+        a.textContent = OG.spaced(g.names[mid]);
+        a.title = g.names[mid];
+        li.append(a);
+        list.append(li);
+      }
+      namesSlot.body.append(p, list);
+    } else if (members.length > 1) {
+      const namesSlot = section("Names", "These names are one concept in the classified hierarchy. The canonical name prefers a short readable name over a long which-style class, then the member with the most is-a relations, then the shorter official name; ties are broken alphabetically. Opening any name shows this same group; the address keeps the name you opened.");
       const list = document.createElement("ul");
       list.className = "links";
       for (const mid of members) {
@@ -677,6 +776,20 @@
       }
       if (rec && rec.q && rec.q.length) {
         qualSlot.el.hidden = false;
+        const edges = [];
+        const seen = new Set();
+        for (const phrase of rec.q) {
+          const edge = OG.parseQualPhrase(phrase, g.byName);
+          if (edge) {
+            const key = edge.prop + ":" + edge.target;
+            if (!seen.has(key)) {
+              seen.add(key);
+              edges.push(edge);
+            }
+          }
+        }
+        focusQuals = edges;
+        state.qualEdges = edges.filter((edge) => state.quals.has(edge.prop));
         const ul = document.createElement("ul");
         ul.className = "quals";
         for (const phrase of rec.q) {
@@ -687,6 +800,11 @@
           paintPhrase(li, phrase);
         }
         qualSlot.body.append(ul);
+        paintQualSection(qualSlot.body, edges);
+        if (state.quals.size) draw();
+      } else {
+        focusQuals = [];
+        state.qualEdges = [];
       }
       if (rec && rec.r) {
         rubricSlot.el.hidden = false;
@@ -764,6 +882,14 @@
     container.append(p);
   }
 
+  function edgeLabel(rel) {
+    if (rel && rel.kind === "qual") {
+      const kind = rel.group && rel.group !== "sanction" ? rel.group + " " : "";
+      return kind + (rel.prop || "sanction");
+    }
+    return (rel && rel.prop) || "";
+  }
+
   function escapeHtml(text) {
     return String(text).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
   }
@@ -775,6 +901,7 @@
     document.querySelectorAll("[data-act=siblings]").forEach((button) => button.setAttribute("aria-pressed", siblingsShown() ? "true" : "false"));
     document.querySelectorAll("[data-act=ancestors]").forEach((button) => button.setAttribute("aria-pressed", state.ancestorsOnly ? "true" : "false"));
     document.querySelectorAll("[data-act=rels]").forEach((button) => button.setAttribute("aria-pressed", state.rels.size ? "true" : "false"));
+    document.querySelectorAll("[data-act=quals]").forEach((button) => button.setAttribute("aria-pressed", state.quals.size ? "true" : "false"));
   }
   function applyAction(act) {
     if (act === "children") {
@@ -792,6 +919,15 @@
       if (panelEl.classList.contains("is-collapsed")) setPanelOpen(true);
       applyRelSelection();
       const section = document.getElementById("rel-section");
+      if (section) section.scrollIntoView({ block: "nearest" });
+      return;
+    } else if (act === "quals") {
+      const kinds = [...new Set(focusQuals.map((edge) => edge.prop))];
+      const allOn = kinds.length > 0 && kinds.every((kind) => state.quals.has(kind));
+      state.quals = allOn ? new Set() : new Set(kinds);
+      if (panelEl.classList.contains("is-collapsed")) setPanelOpen(true);
+      applyQualSelection();
+      const section = document.getElementById("qual-section");
       if (section) section.scrollIntoView({ block: "nearest" });
       return;
     }
@@ -858,7 +994,7 @@
       const strong = document.createElement("span");
       strong.textContent = OG.spaced(model.graph.names[id]);
       button.append(strong);
-      const alias = model.graph.equiv[id];
+      const alias = OG.isBannedBag(model.graph, id) ? [] : model.graph.equiv[id];
       const label = model.labels[String(id)];
       const notes = [];
       if (alias && alias.length) notes.push("= " + alias.map((eid) => model.graph.names[eid]).join(" = "));

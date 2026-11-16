@@ -124,7 +124,21 @@
       seenRel.add(key);
       relEdges.push({ ...edge, target });
     }
-    const seeds = [focus, ...relEdges.map((edge) => edge.target)];
+    const seenQual = new Set();
+    const qualEdges = [];
+    for (const edge of state.qualEdges || []) {
+      if (!(state.quals && state.quals.has(edge.prop))) continue;
+      const target = hier.rep(edge.target);
+      if (target === focus) continue;
+      const key = edge.prop + ":" + target;
+      if (seenQual.has(key)) continue;
+      seenQual.add(key);
+      qualEdges.push({ ...edge, target });
+    }
+    const qualCap = OG.QUAL_CAP || 16;
+    const qualHidden = Math.max(0, qualEdges.length - qualCap);
+    const drawnQuals = qualEdges.slice(0, qualCap);
+    const seeds = [focus, ...relEdges.map((edge) => edge.target), ...drawnQuals.map((edge) => edge.target)];
     const anc = ancestorSet(hier.parentsOf, seeds);
     const seedSet = new Set(seeds);
     const hidden = new Set();
@@ -237,13 +251,31 @@
       if (!nodes.has(from) || !nodes.has(to) || from === to) continue;
       relLinks.push({ source: from, target: to, kind: "rel", prop: edge.prop, color: edge.color, group: edge.group, targetId: edge.target });
     }
+    const qualLinks = [];
+    for (const edge of drawnQuals) {
+      const from = rep(focus);
+      const to = rep(edge.target);
+      if (!nodes.has(from) || !nodes.has(to) || from === to) continue;
+      qualLinks.push({
+        source: from,
+        target: to,
+        kind: "qual",
+        prop: edge.prop,
+        color: edge.color || OG.QUAL_COLOR || "#9a3d6b",
+        group: edge.kind,
+        targetId: edge.target,
+        phrase: edge.phrase,
+      });
+    }
 
     return {
       nodes: [...nodes.values()],
       links,
       clusters,
       relLinks,
+      qualLinks,
       childHidden,
+      qualHidden,
       ancestorCount: anc.size,
       visibleCount: vis.size,
       names,
@@ -534,6 +566,54 @@
         .attr("stroke", rel.color)
         .attr("stroke-width", 1.8)
         .attr("stroke-dasharray", "7 4")
+        .attr("stroke-linecap", "round");
+      const capFrom = pointAlongQuad(trimmed.start, trimmed.mid, trimmed.end, 8);
+      group.append("path")
+        .attr("class", "rel-edge-head")
+        .attr("d", `M${capFrom[0]},${capFrom[1]} L${trimmed.end[0]},${trimmed.end[1]}`)
+        .attr("fill", "none")
+        .attr("stroke", rel.color)
+        .attr("stroke-width", 1.8)
+        .attr("stroke-linecap", "butt")
+        .attr("marker-end", relMarker(rel.color))
+        .attr("pointer-events", "none");
+      if (state.labels) {
+        group.append("text")
+          .attr("class", "rel-label")
+          .attr("x", mx)
+          .attr("y", my)
+          .attr("text-anchor", "middle")
+          .attr("font-size", 10)
+          .attr("font-weight", 700)
+          .attr("fill", rel.color)
+          .attr("paint-order", "stroke")
+          .attr("stroke", "#f3efe6")
+          .attr("stroke-width", 3)
+          .text(rel.prop);
+      }
+    }
+    for (const rel of view.qualLinks || []) {
+      const a = pos.get(rel.source);
+      const b = pos.get(rel.target);
+      if (!a || !b) continue;
+      const mx = (a[0] + b[0]) / 2 + (a[0] <= b[0] ? -36 : 36);
+      const my = (a[1] + b[1]) / 2;
+      const mid = [mx, my];
+      const src = byKeyDrawn.get(rel.source);
+      const tgt = byKeyDrawn.get(rel.target);
+      const startPad = src ? glyphPad(nodeGlyph(src, graph), a, mid) : 6;
+      const endPad = tgt ? glyphPad(nodeGlyph(tgt, graph), b, mid) : 6;
+      const trimmed = trimQuadratic(a, mid, b, startPad, endPad);
+      const group = relG.append("g")
+        .attr("class", "rel-edge qual-edge")
+        .datum(rel);
+      group.append("path")
+        .attr("class", "rel-edge-line")
+        .attr("d", `M${trimmed.start[0]},${trimmed.start[1]} Q${trimmed.mid[0]},${trimmed.mid[1]} ${trimmed.end[0]},${trimmed.end[1]}`)
+        .attr("fill", "none")
+        .attr("stroke", rel.color)
+        .attr("stroke-width", 1.8)
+        .attr("stroke-dasharray", "1.8 3.2")
         .attr("stroke-linecap", "round");
       const capFrom = pointAlongQuad(trimmed.start, trimmed.mid, trimmed.end, 8);
       group.append("path")

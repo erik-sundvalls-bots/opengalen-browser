@@ -465,6 +465,7 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
     n_sanction_lines = 0
     n_label_lines = 0
     spot_asserted = False
+    told_subs: set[tuple[str, str]] = set()
     defs: dict[str, str] = {}
     equiv_names: dict[str, set[str]] = defaultdict(set)
     sanction: dict[str, str] = {}
@@ -519,6 +520,14 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
                     n_sub += 1
                     if SPOT_CHILD in line and SPOT_PARENT in line:
                         spot_asserted = True
+                    try:
+                        node = axiom_call(line)
+                    except Exception:
+                        continue
+                    if isinstance(node, tuple) and node[0] == "SubClassOf" and len(node[1]) >= 2:
+                        child, parent = node[1][0], node[1][1]
+                        if isinstance(child, str) and isinstance(parent, str):
+                            told_subs.add((bag.setdefault(child, child), bag.setdefault(parent, parent)))
                     continue
                 if line.startswith("EquivalentClasses("):
                     n_eq_axioms += 1
@@ -619,6 +628,7 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
         "n_label_lines": n_label_lines,
         "prop_parents": prop_parents,
         "role_edges": role_edges,
+        "told_subs": told_subs,
     }
 
 
@@ -867,6 +877,28 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
     for i in range(n):
         if parents[i]:
             parents[i] = sorted(set(parents[i]))
+    # The classified dump omits the GRAIL value-type / selector hierarchy.
+    # first, second, … and similar leaves are told OWL subclasses of a
+    # *ValueType parent (FoundationModel_TopClassesForMedicalDomain.owl
+    # line 1763: first ⊑ OrdinalPositionValueType) but have no implies line.
+    # Restore those told parents when the dump left the child with none.
+    valuetype_restored: list[tuple[str, str]] = []
+    for child, parent in sorted(owl["told_subs"]):
+        if not parent.endswith("ValueType"):
+            continue
+        if child not in id_of or parent not in id_of:
+            continue
+        ci, pi = id_of[child], id_of[parent]
+        if parents[ci] or ci == pi:
+            continue
+        parents[ci] = [pi]
+        valuetype_restored.append((child, parent))
+    if valuetype_restored:
+        print(
+            f"  restored {len(valuetype_restored)} told OWL value-type parents "
+            "omitted from the classified dump (e.g. first ⊑ OrdinalPositionValueType)",
+            flush=True,
+        )
     removed = break_cycles(parents)
     if removed:
         print(f"removed {len(removed)} cycle back-edges", flush=True)
@@ -1143,6 +1175,15 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
         check(not reaches(innocent, "Adenoma"), f"{innocent} does not have ancestor Adenoma")
     check(reaches("VillousAdenoma", "Adenoma"), "VillousAdenoma still has ancestor Adenoma")
     check(len(removed) == 5, f"known cyclic implies edges dropped: {len(removed)} (expected 5)")
+    check("first" in id_of and "OrdinalPositionValueType" in id_of, "first and OrdinalPositionValueType are in the graph")
+    if "first" in id_of and "OrdinalPositionValueType" in id_of:
+        first_pars = {names[p] for p in parents[id_of["first"]]}
+        check(
+            "OrdinalPositionValueType" in first_pars,
+            "first has told OWL parent OrdinalPositionValueType (omitted from the dump)",
+        )
+        check(reaches("first", "SymbolicValueType"), "first reaches SymbolicValueType via the restored value-type chain")
+    check(len(valuetype_restored) >= 16, f"told value-type parents restored: {len(valuetype_restored)}")
 
     meta = {
         "name": "OpenGALEN 8",
@@ -1168,6 +1209,7 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
             "classifierArtefactsRemoved": len(artefacts),
             "cyclesDropped": len(removed),
             "uniqueParentLinks": sum(len(p) for p in parents),
+            "valueTypeParentsRestored": len(valuetype_restored),
             "selfImplies": self_implies,
             "equivalentLines": n_equiv_lines,
             "equivalentPairsInDump": len(equiv_pairs),
@@ -1283,6 +1325,21 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
     ]
     for child, parent in suspected_kept:
         lines.append(f"- `{child}` implies `{parent}` (kept)")
+    lines += [
+        "",
+        "The classified dump has no `implies` line for the GRAIL ordinal-position "
+        "selectors (`OrdinalPositionValueType newSub [first second … fifteenth]` in "
+        "`GRAIL_Sources/64-3434624046.grl`) or for some other parentless `*ValueType` "
+        "leaves. The told OWL axioms are present, e.g. "
+        "`SubClassOf(first OrdinalPositionValueType)` in "
+        "`OpenGALEN8_FoundationModel_TopClassesForMedicalDomain.owl` line 1763, and "
+        "`SubClassOf(OrdinalPositionValueType SymbolicValueType)` in "
+        "`OpenGALEN8_GenericModel.owl` line 156. Those told parents are restored when "
+        f"the dump left the child with none ({len(valuetype_restored)} links):",
+        "",
+    ]
+    for child, parent in valuetype_restored:
+        lines.append(f"- `{child}` ⊑ `{parent}` (told OWL, omitted from the dump)")
     lines += [
         "",
         f"`{SPOT_CHILD}` is not a direct child of `{SPOT_PARENT}` in the dump. "
