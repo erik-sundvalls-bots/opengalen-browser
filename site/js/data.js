@@ -305,6 +305,7 @@
 
   OG.loadAll = loadAll;
   OG.loadRecord = loadRecord;
+  OG.loadProps = loadProps;
   OG.loadRels = loadRels;
   OG.searchConcepts = searchConcepts;
   OG.spaced = spaced;

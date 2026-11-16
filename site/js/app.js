@@ -836,6 +836,7 @@
     const start = named && model.graph.byName.has(named) ? named : model.meta.defaultConcept;
     if (!named) history.replaceState(null, "", "#concept=" + encodeURIComponent(start));
     showFocus(start);
+    document.dispatchEvent(new CustomEvent("og-ready", { detail: model }));
   }).catch((err) => {
     setStatus(err.message || String(err));
     panel.innerHTML = "<h2>The hierarchy did not load</h2><p class='muted'>" + escapeHtml(err.message || String(err)) + "</p>";

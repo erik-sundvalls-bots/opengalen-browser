@@ -16,7 +16,7 @@
   document.head.appendChild(base);
 })();
 </script>
-<link rel="stylesheet" href="css/app.css?v=9">
+<link rel="stylesheet" href="css/app.css?v=11">
 </head>
 <body>
 <header class="topbar">
@@ -42,6 +42,13 @@
   </div>
 </header>
 <div class="layout">
+  <aside id="mapper" hidden aria-label="Clinergy mapping">
+    <div class="map-bar">
+      <h2>Clinergy mapping</h2>
+      <button type="button" id="map-close">Close</button>
+    </div>
+    <div class="map-scroll" id="map-body"></div>
+  </aside>
   <div id="stage">
     <div id="status">Loading the hierarchy…</div>
     <svg id="g" role="img" aria-label="Concept neighbourhood"></svg>
@@ -91,6 +98,7 @@
   <p id="about-counts" class="muted"></p>
   <p>The terminology and the derived data are under the <a href="gosl.html">GALEN Open Source License</a>. Unmodified sources are in <a href="https://github.com/erik-sundvalls-bots/opengalen-browser/tree/main/sources">sources/</a>. The browser code is MIT. <a href="https://github.com/erik-sundvalls-bots/opengalen-browser">Repository</a>.</p>
   <p><b>Feedback.</b> <a href="https://github.com/erik-sundvalls-bots/opengalen-browser/issues/new">Suggest improvement/feature</a>.</p>
+  <p><b>Clinergy mapping.</b> This stays closed while you browse. <button type="button" id="map-open" class="text-btn">Map Clinergy names</button> opens a worklist beside the graph. A link of the form <code>?map=kind/Name</code> opens the same tool on one name.</p>
   <h3>Controls</h3>
   <ul>
     <li><b>Generated</b>, <b>Labels</b>, and <b>Clustering</b> are switches beside the search box. Generated and Clustering are on at each start. Clustering off shows every ancestor as its own node. <b>Cluster-marking</b> sits beside Clustering and is on at each start; it is hidden while Clustering is off. Siblings is a button in the side panel, off until you turn it on.</li>
@@ -108,10 +116,12 @@
   <button type="button" id="tip-x" aria-label="Close preview" hidden>×</button>
   <div id="tip-body"></div>
 </div>
-<script src="lib/d3.min.js?v=9"></script>
-<script src="lib/d3-dag.min.js?v=9"></script>
-<script src="js/data.js?v=9"></script>
-<script src="js/graph.js?v=9"></script>
-<script src="js/app.js?v=9"></script>
+<script src="lib/d3.min.js?v=11"></script>
+<script src="lib/d3-dag.min.js?v=11"></script>
+<script src="js/data.js?v=11"></script>
+<script src="js/graph.js?v=11"></script>
+<script src="js/map-core.js?v=11"></script>
+<script src="js/app.js?v=11"></script>
+<script src="js/map.js?v=11"></script>
 </body>
 </html>

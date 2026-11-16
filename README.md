@@ -33,6 +33,25 @@ Acknowledgement, as GOSL requires at start-up and within the application:
 - Permalink a concept with `#concept=Name`.
 - Repeat visits are cached in IndexedDB, including offline reuse of what has already been fetched.
 
+The graph is the whole of the first screen. Clinergy mapping is a separate drawer, opened from **About and licence** (“Map Clinergy names”) or by a link. It does not add a control to the top bar.
+
+## Map Clinergy names
+
+The drawer reviews Clinergy names the extractor could not verify, against this hierarchy. A static Pages build is enough. Nothing is written to a server.
+
+- The bundled list is the published thumb-pain demonstration (`site/data/worklist/thumb-pain.yaml`): names from that public extract that do not already have a verified mapping. **Load worklist** accepts one or more `map/worklist/<kind>.yaml` files, or the same shape in JSON.
+- Candidates are an exact name, a name equal after the extractor’s normalisation (case, punctuation, a `NAMED` prefix, the documented spelling changes), a fuzzy token overlap from the browser’s search index, or a language-label hit. Choosing one focuses that concept in the graph and the side panel.
+- The decision is **this concept**, **no equivalent**, **composed expression**, or **unsure**. A composition is a genus plus `which <role> <filler>` criteria, taken from concepts you focus and from properties in this extract. It is stored as `opengalen: null` with the expression in the rationale. If that shape is already a named class, the drawer offers that name instead of inventing one.
+- **Record** keeps the decision in this browser. **Copy snippet**, **New issue**, and **Download YAML** produce `map/reviewed.yaml` entries (`opengalen`, `confidence`, `rationale`, `needsHumanReview`). The issue link opens [clinergy-extractor’s mapping template](https://github.com/erik-sundvalls-bots/clinergy-extractor/issues/new?template=mapping.yml&labels=mapping) with the snippet filled in. A snippet that does not fit in the link is downloaded, to attach.
+
+A workbench can point one unmapped name here without embedding a second mapper:
+
+`https://erik-sundvalls-bots.github.io/opengalen-browser/?map=value/mild&display=mild&feature=AbsoluteSeverity&siblings=moderate,severe&forms=ThumbPainSymptom`
+
+`kind` is `formTopic`, `exam`, `descriptor`, `criterialLink`, `value` or `concept`. `#concept=Name` still focuses the graph. The extractor checks a pasted snippet with `deno task map <extract-dir> <opengalen-source> <map-dir> --reviewed <file>`: the Clinergy name has to be in that extraction, and `opengalen` has to be a real OpenGALEN 8 name or `null`.
+
+`node build/test_map.mjs` checks the snippet shape, the worklist parser and the candidate order.
+
 Generated classes are real nodes in the published hierarchy (the OWL translation names anonymous expressions by concatenating them). A class is treated as generated when its name contains two or more `which` glue words, or one `which` and is at least 56 characters long. Shorter single-`which` names such as `PhenomenonwhichinvolvesHeart` stay visible, because they are the ordinary inferred parents.
 
 ## How the data is built

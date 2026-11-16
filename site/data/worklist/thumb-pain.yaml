@@ -1,0 +1,206 @@
+# Unmapped Clinergy names from the published thumb-pain and thumb-swelling demonstration.
+# Same names as the public workbench extract. Published with the owner's approval, for demonstration only.
+# Clinergy names: Content (c) 1997-8 Semantic Technologies Ltd / Victoria University of Manchester. All rights reserved.
+# Names that already have a verified OpenGALEN mapping in that extract are not listed.
+# Load a map/worklist/*.yaml file from clinergy-to-opengalen to review the full private extraction instead.
+ThumbPainSymptom:
+  kinds: [formTopic]
+  display: thumb pain
+  category: symptom
+  location: Thumb
+  supers: [FingerPainSymptom]
+  usedInForms: {count: 1, examples: [ThumbPainSymptom]}
+ThumbSwellingSymptom:
+  kinds: [formTopic]
+  display: thumb swelling
+  category: symptom
+  location: Thumb
+  supers: [HandSwellingSymptom]
+  usedInForms: {count: 1, examples: [ThumbSwellingSymptom]}
+JointStiffnessSymptom:
+  kinds: [formTopic]
+  display: joint stiffness
+  category: symptom
+  usedInForms: {count: 1, examples: [ThumbSwellingSymptom]}
+ThumbExam:
+  kinds: [exam]
+  display: thumb examination
+  examGroup: Thumb
+  usedInForms: {count: 2, examples: [ThumbPainSymptom, ThumbSwellingSymptom]}
+AbsolutePainDescriptor:
+  kinds: [descriptor]
+  display: Character
+  usedInForms: {count: 1, examples: [ThumbPainSymptom]}
+  valueSets:
+    - [achingPain, piercingPain, dullPain, throbbingPain, pressingPain, burningPain]
+AbsoluteSeverity:
+  kinds: [descriptor]
+  display: Severity
+  usedInForms: {count: 2, examples: [ThumbPainSymptom, ThumbSwellingSymptom]}
+  valueSets:
+    - [mild, moderate, severe]
+AbsoluteFrequency:
+  kinds: [descriptor]
+  display: Frequency
+  usedInForms: {count: 1, examples: [ThumbPainSymptom]}
+  valueSets:
+    - [infrequent, occasional, frequent]
+AbsoluteOnset:
+  kinds: [descriptor]
+  display: Onset
+  usedInForms: {count: 2, examples: [ThumbPainSymptom, ThumbSwellingSymptom]}
+  valueSets:
+    - [gradual, rapid, sudden]
+AbsoluteProgress:
+  kinds: [descriptor]
+  display: Progress
+  usedInForms: {count: 2, examples: [ThumbPainSymptom, ThumbSwellingSymptom]}
+  valueSets:
+    - [better, same, worse]
+AbsoluteProcessPattern:
+  kinds: [descriptor]
+  display: Pattern
+  usedInForms: {count: 1, examples: [ThumbPainSymptom]}
+  valueSets:
+    - [single, intermittant, persistant, continuous]
+QuantityDuration:
+  kinds: [descriptor]
+  display: Duration
+  usedInForms: {count: 2, examples: [ThumbPainSymptom, ThumbSwellingSymptom]}
+  valueSets:
+    - [TemporalValue]
+AbsoluteConsistency:
+  kinds: [descriptor]
+  display: Consistency
+  usedInForms: {count: 1, examples: [ThumbSwellingSymptom]}
+  valueSets:
+    - [soft, firm, hard, fluctuant]
+AbsoluteTexture:
+  kinds: [descriptor]
+  display: Texture
+  usedInForms: {count: 1, examples: [ThumbSwellingSymptom]}
+  valueSets:
+    - [rough, smooth, nodular, irregular]
+ConseqPain:
+  kinds: [criterialLink]
+  display: Pain
+  usedInForms: {count: 1, examples: [ThumbSwellingSymptom]}
+ConseqTendernessSign:
+  kinds: [criterialLink]
+  display: Tenderness
+  usedInForms: {count: 1, examples: [ThumbSwellingSymptom]}
+ConseqErythemaSign:
+  kinds: [criterialLink]
+  display: Erythema
+  usedInForms: {count: 1, examples: [ThumbSwellingSymptom]}
+achingPain:
+  kinds: [value]
+  display: aching
+  usedAsValueOf:
+    - {feature: AbsolutePainDescriptor, siblings: [piercingPain, dullPain, throbbingPain, pressingPain, burningPain], forms: 1, example: ThumbPainSymptom}
+piercingPain:
+  kinds: [value]
+  display: piercing
+  usedAsValueOf:
+    - {feature: AbsolutePainDescriptor, siblings: [achingPain, dullPain, throbbingPain, pressingPain, burningPain], forms: 1, example: ThumbPainSymptom}
+dullPain:
+  kinds: [value]
+  display: dull
+  usedAsValueOf:
+    - {feature: AbsolutePainDescriptor, siblings: [achingPain, piercingPain, throbbingPain, pressingPain, burningPain], forms: 1, example: ThumbPainSymptom}
+throbbingPain:
+  kinds: [value]
+  display: throbbing
+  usedAsValueOf:
+    - {feature: AbsolutePainDescriptor, siblings: [achingPain, piercingPain, dullPain, pressingPain, burningPain], forms: 1, example: ThumbPainSymptom}
+pressingPain:
+  kinds: [value]
+  display: pressing
+  usedAsValueOf:
+    - {feature: AbsolutePainDescriptor, siblings: [achingPain, piercingPain, dullPain, throbbingPain, burningPain], forms: 1, example: ThumbPainSymptom}
+mild:
+  kinds: [value]
+  display: mild
+  usedAsValueOf:
+    - {feature: AbsoluteSeverity, siblings: [moderate, severe], forms: 2, example: ThumbPainSymptom}
+moderate:
+  kinds: [value]
+  display: moderate
+  usedAsValueOf:
+    - {feature: AbsoluteSeverity, siblings: [mild, severe], forms: 2, example: ThumbPainSymptom}
+severe:
+  kinds: [value]
+  display: severe
+  usedAsValueOf:
+    - {feature: AbsoluteSeverity, siblings: [mild, moderate], forms: 2, example: ThumbPainSymptom}
+frequent:
+  kinds: [value]
+  display: frequent
+  usedAsValueOf:
+    - {feature: AbsoluteFrequency, siblings: [infrequent, occasional], forms: 1, example: ThumbPainSymptom}
+rapid:
+  kinds: [value]
+  display: rapid
+  usedAsValueOf:
+    - {feature: AbsoluteOnset, siblings: [gradual, sudden], forms: 2, example: ThumbPainSymptom}
+better:
+  kinds: [value]
+  display: better
+  usedAsValueOf:
+    - {feature: AbsoluteProgress, siblings: [same, worse], forms: 2, example: ThumbPainSymptom}
+same:
+  kinds: [value]
+  display: same
+  usedAsValueOf:
+    - {feature: AbsoluteProgress, siblings: [better, worse], forms: 2, example: ThumbPainSymptom}
+worse:
+  kinds: [value]
+  display: worse
+  usedAsValueOf:
+    - {feature: AbsoluteProgress, siblings: [better, same], forms: 2, example: ThumbPainSymptom}
+persistant:
+  kinds: [value]
+  display: persistant
+  usedAsValueOf:
+    - {feature: AbsoluteProcessPattern, siblings: [single, intermittant, continuous], forms: 1, example: ThumbPainSymptom}
+irregular:
+  kinds: [value]
+  display: irregular
+  usedAsValueOf:
+    - {feature: AbsoluteTexture, siblings: [rough, smooth, nodular], forms: 1, example: ThumbSwellingSymptom}
+PainSymptom:
+  kinds: [concept]
+  display: pain
+  category: symptom
+FingerPainSymptom:
+  kinds: [concept]
+  display: finger pain
+  category: symptom
+HandSwellingSymptom:
+  kinds: [concept]
+  display: hand swelling
+  category: symptom
+ThumbSprain:
+  kinds: [concept]
+  display: thumb sprain
+  category: disease
+ThumbJointDislocation:
+  kinds: [concept]
+  display: thumb joint dislocation
+  category: disease
+ThumbFracture:
+  kinds: [concept]
+  display: thumb fracture
+  category: disease
+SubcutaneousInfection:
+  kinds: [concept]
+  display: subcutaneous infection
+  category: disease
+Whitlow:
+  kinds: [concept]
+  display: whitlow
+  category: disease
+Cellulitis:
+  kinds: [concept]
+  display: cellulitis
+  category: disease

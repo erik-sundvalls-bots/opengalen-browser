@@ -371,10 +371,123 @@ svg.hovering .dimmable { opacity: .14; }
 svg.hovering .dimmable.hi { opacity: 1; }
 svg.hovering path.lk.hi { stroke-opacity: .95 !important; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.text-btn {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--teal);
+  font: inherit;
+  text-decoration: underline;
+}
+#mapper {
+  flex: none;
+  width: min(420px, 100%);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+  background: var(--card);
+}
+#mapper[hidden] { display: none !important; }
+.map-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.map-bar h2 { margin: 0; font-size: 20px; }
+#map-close, .map-actions button, .map-file-btn, #map-demo, .map-chip {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 650;
+}
+#map-close { padding: 4px 12px; }
+.map-scroll { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.map-tools { flex: none; padding: 10px 12px 0; }
+.map-lead, .map-count, .map-expr, .map-named { margin: 0 0 8px; font-size: 13px; line-height: 1.4; }
+.map-lead { color: var(--muted); }
+.map-file { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.map-file-btn { cursor: pointer; }
+.map-file-btn input { display: none; }
+.map-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.map-chip.is-on, .map-actions button:first-child { background: var(--teal); color: #fff; border-color: var(--teal); }
+#map-find, #map-target, #map-genus, .map-crit input, #map-why, #map-conf {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.map-split { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.map-list { flex: none; max-height: 28%; overflow: auto; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.map-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  padding: 6px 12px;
+}
+.map-row small { display: block; color: var(--muted); font-size: 12px; }
+.map-row.is-on { background: var(--deep); }
+.map-detail { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px 24px; }
+.map-detail h3 { margin: 0 0 6px; font-size: 22px; overflow-wrap: anywhere; }
+.map-detail h4 { margin: 12px 0 4px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.map-kicker { margin: 0; color: var(--amber); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.map-context { font-size: 13px; line-height: 1.4; }
+.map-context b { font-weight: 650; }
+.map-cands { list-style: none; margin: 0; padding: 0; }
+.map-cand, .map-hint {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 4px 2px;
+}
+.map-cand:hover, .map-hint:hover, .map-row:hover { background: var(--paper); }
+.map-cand b { font-weight: 650; }
+.map-cand em { color: var(--teal); font-style: normal; font-size: 12px; margin-left: 4px; }
+.map-cand small, .map-error { display: block; color: var(--muted); font-size: 12px; }
+.map-error { color: #8a3d2f; margin: 6px 0; }
+.map-modes { border: 0; margin: 8px 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 10px; }
+.map-modes legend { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 4px; }
+.map-modes label { font-size: 13px; }
+.map-detail label { display: block; font-size: 13px; font-weight: 650; margin: 8px 0; }
+.map-check { font-weight: 500; }
+.map-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.map-crit { display: flex; gap: 4px; margin: 4px 0; }
+.map-crit input { flex: 1; width: auto; }
+.map-crit button, #map-use-focus, #map-genus-focus, #map-add-crit, #map-use-named {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+#map-snippet {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--paper);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  margin: 0;
+}
+#map-compose p { font-size: 13px; line-height: 1.4; }
 @media (max-width: 860px) {
   .topbar { flex-wrap: wrap; }
   h1 { font-size: 18px; }
   .layout { flex-direction: column; }
+  #mapper { width: 100%; max-height: 52vh; border-right: 0; border-bottom: 1px solid var(--line); }
   #stage { min-height: 46vh; }
   #panel {
     width: 100%;
