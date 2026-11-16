@@ -116,10 +116,9 @@
     const seenRel = new Set();
     const relEdges = [];
     for (const edge of state.relEdges || []) {
-      if (!(state.rels && state.rels.has(edge.prop))) continue;
       const target = hier.rep(edge.target);
       if (target === focus) continue;
-      const key = edge.prop + ":" + target;
+      const key = (OG.edgeKey ? OG.edgeKey(edge) : edge.prop + ":" + edge.target) + ":" + target;
       if (seenRel.has(key)) continue;
       seenRel.add(key);
       relEdges.push({ ...edge, target });
@@ -127,18 +126,14 @@
     const seenQual = new Set();
     const qualEdges = [];
     for (const edge of state.qualEdges || []) {
-      if (!(state.quals && state.quals.has(edge.prop))) continue;
       const target = hier.rep(edge.target);
       if (target === focus) continue;
-      const key = edge.prop + ":" + target;
+      const key = (OG.edgeKey ? OG.edgeKey(edge) : edge.prop + ":" + edge.target) + ":" + target;
       if (seenQual.has(key)) continue;
       seenQual.add(key);
       qualEdges.push({ ...edge, target });
     }
-    const qualCap = OG.QUAL_CAP || 16;
-    const qualHidden = Math.max(0, qualEdges.length - qualCap);
-    const drawnQuals = qualEdges.slice(0, qualCap);
-    const seeds = [focus, ...relEdges.map((edge) => edge.target), ...drawnQuals.map((edge) => edge.target)];
+    const seeds = [focus, ...relEdges.map((edge) => edge.target), ...qualEdges.map((edge) => edge.target)];
     const anc = ancestorSet(hier.parentsOf, seeds);
     const seedSet = new Set(seeds);
     const hidden = new Set();
@@ -252,7 +247,7 @@
       relLinks.push({ source: from, target: to, kind: "rel", prop: edge.prop, color: edge.color, group: edge.group, targetId: edge.target });
     }
     const qualLinks = [];
-    for (const edge of drawnQuals) {
+    for (const edge of qualEdges) {
       const from = rep(focus);
       const to = rep(edge.target);
       if (!nodes.has(from) || !nodes.has(to) || from === to) continue;
@@ -275,7 +270,6 @@
       relLinks,
       qualLinks,
       childHidden,
-      qualHidden,
       ancestorCount: anc.size,
       visibleCount: vis.size,
       names,

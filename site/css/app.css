@@ -359,7 +359,7 @@ svg text { pointer-events: none; }
 .qual-swatch { border-top-style: dotted; }
 .rel-kind { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; }
 .rel-group { margin: 8px 0 2px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
-.rel-actions { display: flex; gap: 6px; margin-bottom: 4px; }
+.rel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 4px; }
 .rel-actions button, .rel-kind button {
   border: 1px solid var(--line);
   background: var(--card);
@@ -368,6 +368,33 @@ svg text { pointer-events: none; }
   font-size: 12px;
 }
 .rel-kind button[aria-pressed="true"] { color: #fff; border-color: transparent; }
+.rel-count { margin: 0 0 0 auto; font-size: 12px; color: var(--muted); }
+.edge-list {
+  max-height: 14.5rem;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 8px 6px;
+  margin: 4px 0 0;
+  background: var(--card);
+}
+.edge-pick {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 3px 2px;
+  cursor: pointer;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.edge-pick input {
+  margin: 4px 0 0;
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+.edge-pick-text { min-width: 0; }
 svg.hovering .dimmable { opacity: .14; }
 svg.hovering .dimmable.hi { opacity: 1; }
 svg.hovering path.lk.hi { stroke-opacity: .95 !important; }

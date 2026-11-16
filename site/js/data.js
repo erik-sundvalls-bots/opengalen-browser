@@ -196,7 +196,29 @@
     "grammatically",
   ];
   const QUAL_COLOR = "#9a3d6b";
-  const QUAL_CAP = 16;
+  // Default number of relationship or sanction items checked in the panel.
+  // Not a hard cap: the user can check more, or all, from the scrollable list.
+  const EDGE_CAP = 16;
+
+  function edgeKey(edge) {
+    if (!edge) return "";
+    const target = edge.target != null ? edge.target : (edge.targetName || "");
+    return String(edge.prop || "") + ":" + String(target);
+  }
+
+  function defaultEdgeKeys(edges, cap) {
+    const limit = cap == null ? EDGE_CAP : cap;
+    const keys = [];
+    const seen = new Set();
+    for (let i = 0; i < (edges || []).length; i++) {
+      const key = edgeKey(edges[i]);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      keys.push(key);
+      if (keys.length >= limit) break;
+    }
+    return keys;
+  }
 
   function parseQualPhrase(phrase, byName) {
     const text = String(phrase || "").trim();
@@ -504,7 +526,9 @@
   OG.nodeLabel = nodeLabel;
   OG.collapsedHierarchy = collapsedHierarchy;
   OG.parseQualPhrase = parseQualPhrase;
+  OG.edgeKey = edgeKey;
+  OG.defaultEdgeKeys = defaultEdgeKeys;
   OG.QUAL_COLOR = QUAL_COLOR;
-  OG.QUAL_CAP = QUAL_CAP;
+  OG.EDGE_CAP = EDGE_CAP;
   OG.QUAL_PREFIXES = QUAL_PREFIXES;
 })();

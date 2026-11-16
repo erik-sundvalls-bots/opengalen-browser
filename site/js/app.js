@@ -37,7 +37,7 @@
   const suggest = document.getElementById("suggest");
   const panel = document.getElementById("panel-body");
   const tip = document.getElementById("tip");
-  const state = { showGen: true, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, marking: true, expanded: new Set(), childExtra: 0, focus: 0, rels: new Set(), relEdges: [], quals: new Set(), qualEdges: [] };
+  const state = { showGen: true, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, marking: true, expanded: new Set(), childExtra: 0, focus: 0, rels: new Set(), relEdges: [], relOn: false, relReady: false, quals: new Set(), qualEdges: [], qualOn: false, qualReady: false };
   let model = null;
   let activeSuggest = -1;
   let panelToken = 0;
@@ -89,13 +89,21 @@
     if (state.focus !== id) {
       state.expanded = new Set();
       state.childExtra = 0;
+      state.rels = new Set();
+      state.quals = new Set();
+      state.relOn = false;
+      state.qualOn = false;
+      state.relReady = false;
+      state.qualReady = false;
+      focusRels = [];
+      focusQuals = [];
     }
     hideTip();
     hideInfo();
     state.focus = id;
     state.relEdges = [];
     state.qualEdges = [];
-    focusQuals = [];
+    if (!state.qualReady) focusQuals = [];
     document.title = OG.groupHeading(model.graph, id) + " · OpenGALEN 8";
     draw();
     fillPanel(id);
@@ -119,7 +127,12 @@
     }
     if (token !== relToken || state.focus !== id) return;
     focusRels = rows;
-    state.relEdges = rows.filter((edge) => state.rels.has(edge.prop));
+    if (!state.relReady) {
+      state.rels = new Set(OG.defaultEdgeKeys(rows));
+      state.relOn = false;
+      state.relReady = true;
+    }
+    state.relEdges = state.relOn ? rows.filter((edge) => state.rels.has(OG.edgeKey(edge))) : [];
     draw();
     paintRelSection();
     recolorPanel();
@@ -136,7 +149,8 @@
         OG.spaced(OG.groupHeading(g, state.focus))
         + " · " + lastView.ancestorCount + " ancestors"
         + (state.ancestorsOnly ? " · ancestors only" : state.children === false ? " · children hidden" : hiddenKids ? " · " + hiddenKids + " generated children hidden" : "")
-        + (lastView.qualHidden ? " · " + lastView.qualHidden + " sanctions not drawn" : "")
+        + (state.relOn && state.relEdges.length ? " · " + state.relEdges.length + " relationship" + (state.relEdges.length === 1 ? "" : "s") : "")
+        + (state.qualOn && state.qualEdges.length ? " · " + state.qualEdges.length + " sanction" + (state.qualEdges.length === 1 ? "" : "s") : "")
       );
     } catch (err) {
       setStatus("Could not lay out this neighbourhood. " + err.message);
@@ -464,6 +478,105 @@
     if (grail && grail.dataset.raw) paintColored(grail, grail.dataset.raw);
   }
 
+  function shownCountText(selected, total) {
+    return "shown " + selected + " of " + total;
+  }
+
+  function updatePickCount(kind) {
+    const edges = kind === "rel" ? focusRels : focusQuals;
+    const selected = kind === "rel" ? state.rels : state.quals;
+    const el = document.getElementById(kind + "-count");
+    if (el) el.textContent = shownCountText(selected.size, edges.length);
+  }
+
+  function syncPickChecks(kind) {
+    const selected = kind === "rel" ? state.rels : state.quals;
+    const list = document.getElementById(kind + "-list");
+    if (!list) return;
+    list.querySelectorAll("input[type=checkbox]").forEach((box) => {
+      box.checked = selected.has(box.dataset.key);
+    });
+    updatePickCount(kind);
+  }
+
+  function selectedDrawnEdges(edges, selected, on) {
+    if (!on) return [];
+    return edges.filter((edge) => selected.has(OG.edgeKey(edge)));
+  }
+
+  function makeAllNone(kind) {
+    const actions = document.createElement("div");
+    actions.className = "rel-actions";
+    const all = document.createElement("button");
+    all.type = "button";
+    all.textContent = "All";
+    const none = document.createElement("button");
+    none.type = "button";
+    none.textContent = "None";
+    const count = document.createElement("p");
+    count.id = kind + "-count";
+    count.className = "rel-count";
+    all.addEventListener("click", () => {
+      const edges = kind === "rel" ? focusRels : focusQuals;
+      const keys = new Set(edges.map((edge) => OG.edgeKey(edge)));
+      if (kind === "rel") { state.rels = keys; state.relOn = keys.size > 0; }
+      else { state.quals = keys; state.qualOn = keys.size > 0; }
+      if (kind === "rel") applyRelSelection();
+      else applyQualSelection();
+    });
+    none.addEventListener("click", () => {
+      if (kind === "rel") { state.rels = new Set(); state.relOn = false; applyRelSelection(); }
+      else { state.quals = new Set(); state.qualOn = false; applyQualSelection(); }
+    });
+    actions.append(all, none, count);
+    return actions;
+  }
+
+  function makePickRow(kind, edge, g) {
+    const key = OG.edgeKey(edge);
+    const label = document.createElement("label");
+    label.className = "edge-pick";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.dataset.key = key;
+    box.checked = (kind === "rel" ? state.rels : state.quals).has(key);
+    const text = document.createElement("span");
+    text.className = "edge-pick-text";
+    if (kind === "qual" && edge.phrase) {
+      text.classList.add("qual-line");
+      text.dataset.phrase = edge.phrase;
+      paintPhrase(text, edge.phrase);
+    } else {
+      const prop = document.createElement("span");
+      prop.className = "rel-word";
+      prop.style.color = edge.color || (kind === "qual" ? (OG.QUAL_COLOR || "#9a3d6b") : "");
+      prop.style.fontWeight = "700";
+      prop.textContent = edge.prop || "";
+      text.append(prop);
+      const targetName = edge.targetName || (g && g.names[edge.target]) || "";
+      if (targetName) text.append(" " + OG.spaced(targetName));
+    }
+    const id = (kind === "rel" ? "rel-pick-" : "qual-pick-") + key.replace(/[^A-Za-z0-9_-]+/g, "_");
+    box.id = id;
+    label.setAttribute("for", id);
+    // Keep the input inside the label as well, and still set for/id so
+    // the control is a real labelled checkbox for keyboard users.
+    box.addEventListener("change", () => {
+      const selected = kind === "rel" ? state.rels : state.quals;
+      if (box.checked) {
+        selected.add(key);
+        if (kind === "rel") state.relOn = true;
+        else state.qualOn = true;
+      } else {
+        selected.delete(key);
+      }
+      if (kind === "rel") applyRelSelection();
+      else applyQualSelection();
+    });
+    label.append(box, text);
+    return label;
+  }
+
   function paintRelSection() {
     const box = document.getElementById("rel-box");
     if (!box) return;
@@ -474,76 +587,54 @@
       return;
     }
     box.className = "";
-    const actions = document.createElement("div");
-    actions.className = "rel-actions";
-    const all = document.createElement("button");
-    all.type = "button";
-    all.textContent = "All";
-    const none = document.createElement("button");
-    none.type = "button";
-    none.textContent = "None";
-    all.addEventListener("click", () => { state.rels = new Set(focusRels.map((edge) => edge.prop)); applyRelSelection(); });
-    none.addEventListener("click", () => { state.rels = new Set(); applyRelSelection(); });
-    actions.append(all, none);
-    box.append(actions);
+    box.append(makeAllNone("rel"));
+    const g = model.graph;
     const groups = new Map();
-    for (const edge of focusRels) {
-      if (!groups.has(edge.group)) groups.set(edge.group, new Map());
-      const kinds = groups.get(edge.group);
-      if (!kinds.has(edge.prop)) kinds.set(edge.prop, { color: edge.color, n: 0 });
-      kinds.get(edge.prop).n += 1;
-    }
     const key = document.createElement("div");
     key.className = "rel-key";
-    for (const [group, kinds] of groups) {
+    const seenProp = new Set();
+    for (const edge of focusRels) {
+      if (!groups.has(edge.group)) groups.set(edge.group, []);
+      groups.get(edge.group).push(edge);
+      if (seenProp.has(edge.prop)) continue;
+      seenProp.add(edge.prop);
+      const legend = document.createElement("span");
+      legend.style.color = edge.color;
+      const dash = document.createElement("i");
+      dash.className = "rel-swatch";
+      legend.append(dash, edge.prop);
+      key.append(legend);
+    }
+    box.append(key);
+    const list = document.createElement("div");
+    list.id = "rel-list";
+    list.className = "edge-list";
+    list.setAttribute("role", "group");
+    list.setAttribute("aria-label", "Definition relationships to draw");
+    for (const [group, edges] of groups) {
       const heading = document.createElement("div");
       heading.className = "rel-group";
       heading.textContent = group;
-      box.append(heading);
-      for (const [prop, info] of kinds) {
-        const row = document.createElement("div");
-        row.className = "rel-kind";
-        const button = document.createElement("button");
-        button.type = "button";
-        button.textContent = prop + " (" + info.n + ")";
-        button.setAttribute("aria-pressed", state.rels.has(prop) ? "true" : "false");
-        button.style.background = state.rels.has(prop) ? info.color : "";
-        button.addEventListener("click", () => {
-          if (state.rels.has(prop)) state.rels.delete(prop);
-          else state.rels.add(prop);
-          applyRelSelection();
-        });
-        const sw = document.createElement("span");
-        sw.className = "rel-swatch";
-        sw.style.color = info.color;
-        row.append(button, sw);
-        box.append(row);
-        const legend = document.createElement("span");
-        legend.style.color = info.color;
-        const dash = document.createElement("i");
-        dash.className = "rel-swatch";
-        legend.append(dash, prop);
-        key.append(legend);
-      }
+      list.append(heading);
+      for (const edge of edges) list.append(makePickRow("rel", edge, g));
     }
-    box.append(key);
+    box.append(list);
+    updatePickCount("rel");
     syncActions();
   }
 
   function applyRelSelection() {
-    state.relEdges = focusRels.filter((edge) => state.rels.has(edge.prop));
+    state.relEdges = selectedDrawnEdges(focusRels, state.rels, state.relOn);
+    syncPickChecks("rel");
     syncActions();
     if (model) draw();
-    paintRelSection();
   }
 
   function applyQualSelection() {
-    state.qualEdges = focusQuals.filter((edge) => state.quals.has(edge.prop));
+    state.qualEdges = selectedDrawnEdges(focusQuals, state.quals, state.qualOn);
+    syncPickChecks("qual");
     syncActions();
     if (model) draw();
-    const section = document.getElementById("qual-section");
-    const body = section && section.querySelector("div");
-    if (body) paintQualSection(body, focusQuals);
   }
 
   function paintQualSection(container, edges) {
@@ -552,63 +643,43 @@
     if (!edges || !edges.length) return;
     box = document.createElement("div");
     box.id = "qual-box";
-    const actions = document.createElement("div");
-    actions.className = "rel-actions";
-    const all = document.createElement("button");
-    all.type = "button";
-    all.textContent = "All";
-    const none = document.createElement("button");
-    none.type = "button";
-    none.textContent = "None";
-    all.addEventListener("click", () => { state.quals = new Set(focusQuals.map((edge) => edge.prop)); applyQualSelection(); });
-    none.addEventListener("click", () => { state.quals = new Set(); applyQualSelection(); });
-    actions.append(all, none);
-    box.append(actions);
-    const kinds = new Map();
-    for (const edge of edges) {
-      if (!kinds.has(edge.prop)) kinds.set(edge.prop, { color: edge.color, n: 0 });
-      kinds.get(edge.prop).n += 1;
-    }
+    box.append(makeAllNone("qual"));
+    const color = OG.QUAL_COLOR || "#9a3d6b";
     const key = document.createElement("div");
     key.className = "rel-key";
-    const color = OG.QUAL_COLOR || "#9a3d6b";
-    for (const [prop, info] of kinds) {
-      const row = document.createElement("div");
-      row.className = "rel-kind";
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = prop + " (" + info.n + ")";
-      button.setAttribute("aria-pressed", state.quals.has(prop) ? "true" : "false");
-      button.style.background = state.quals.has(prop) ? color : "";
-      button.addEventListener("click", () => {
-        if (state.quals.has(prop)) state.quals.delete(prop);
-        else state.quals.add(prop);
-        applyQualSelection();
-      });
-      const sw = document.createElement("span");
-      sw.className = "rel-swatch qual-swatch";
-      sw.style.color = color;
-      row.append(button, sw);
-      box.append(row);
+    const seenProp = new Set();
+    const groups = new Map();
+    for (const edge of edges) {
+      if (!groups.has(edge.prop)) groups.set(edge.prop, []);
+      groups.get(edge.prop).push(edge);
+      if (seenProp.has(edge.prop)) continue;
+      seenProp.add(edge.prop);
       const legend = document.createElement("span");
       legend.style.color = color;
       const dash = document.createElement("i");
       dash.className = "rel-swatch qual-swatch";
-      legend.append(dash, prop);
+      legend.append(dash, edge.prop);
       key.append(legend);
     }
     box.append(key);
-    const hidden = Math.max(0, (state.qualEdges || []).length - (OG.QUAL_CAP || 16));
-    if (hidden) {
-      const noteEl = document.createElement("p");
-      noteEl.className = "muted";
-      noteEl.textContent = hidden + " more sanction" + (hidden === 1 ? "" : "s") + " listed above, not drawn.";
-      box.append(noteEl);
+    const list = document.createElement("div");
+    list.id = "qual-list";
+    list.className = "edge-list";
+    list.setAttribute("role", "group");
+    list.setAttribute("aria-label", "Sanctions and qualifiers to draw");
+    const g = model.graph;
+    for (const [prop, rows] of groups) {
+      const heading = document.createElement("div");
+      heading.className = "rel-group";
+      heading.textContent = prop;
+      list.append(heading);
+      for (const edge of rows) list.append(makePickRow("qual", edge, g));
     }
-    // Keep the phrase list after the drawing controls.
-    const phrases = container.querySelector("ul.quals");
-    if (phrases) container.insertBefore(box, phrases);
-    else container.prepend(box);
+    box.append(list);
+    const leftover = container.querySelector("ul.quals");
+    if (leftover) leftover.remove();
+    container.prepend(box);
+    updatePickCount("qual");
     syncActions();
   }
 
@@ -673,14 +744,14 @@
       p.textContent = "Language note: " + label;
       official.after(p);
     }
-    const relSlot = section("Relationships", "Dashed arrows are definition roles, pointing at the filler. Is-a links have no arrowheads. The same colour on a sanction, or in the GRAIL source, names that role but is not drawn: a sanction says what is allowed, and a definition link says what this concept has. Every selected target is climbed by is-a to the root, and clustering folds the shared ancestors. A nested filler is one edge to its genus; the nesting stays in the definition text.");
+    const relSlot = section("Relationships", "Dashed arrows are definition roles, pointing at the filler. Is-a links have no arrowheads. Tick the items you want on the graph. All and None change the whole list. The first 16 are checked to start with; you can check more, or fewer. The count is how many are checked. The Relationships button turns drawing on or off without forgetting the ticks. A new concept resets the list. Ticking a box while drawing is off turns it on.");
     relSlot.el.id = "rel-section";
     relSlot.body.id = "rel-box";
     relSlot.body.textContent = "Loading definition relationships…";
     const defSlot = section("Definition");
     defSlot.body.id = "def-text";
     defSlot.body.textContent = "Loading the definition…";
-    const qualSlot = section("Sanctions and qualifiers", "Dotted arrows are sanctions and qualifiers: a role that is allowed for this concept, not a definition link. They use one colour, distinct from is-a and from the dashed definition-role arrows. Off until you turn a kind on, like Relationships. At most " + OG.QUAL_CAP + " are drawn; any more are listed here only.");
+    const qualSlot = section("Sanctions and qualifiers", "Dotted arrows are sanctions and qualifiers: a role that is allowed for this concept, not a definition link. They use one colour, distinct from is-a and from the dashed definition-role arrows. Tick the items you want on the graph, as with Relationships. The first 16 are checked to start with; you can check more, or fewer. The Sanctions and qualifiers button turns drawing on or off without forgetting the ticks. A new concept resets the list. Ticking a box while drawing is off turns it on.");
     qualSlot.el.id = "qual-section";
     const rubricSlot = section("Dissection rubric");
     const grailSlot = section("GRAIL source");
@@ -789,19 +860,14 @@
           }
         }
         focusQuals = edges;
-        state.qualEdges = edges.filter((edge) => state.quals.has(edge.prop));
-        const ul = document.createElement("ul");
-        ul.className = "quals";
-        for (const phrase of rec.q) {
-          const li = document.createElement("li");
-          li.className = "qual-line";
-          li.dataset.phrase = phrase;
-          ul.append(li);
-          paintPhrase(li, phrase);
+        if (!state.qualReady) {
+          state.quals = new Set(OG.defaultEdgeKeys(edges));
+          state.qualOn = false;
+          state.qualReady = true;
         }
-        qualSlot.body.append(ul);
+        state.qualEdges = state.qualOn ? edges.filter((edge) => state.quals.has(OG.edgeKey(edge))) : [];
         paintQualSection(qualSlot.body, edges);
-        if (state.quals.size) draw();
+        if (state.qualOn) draw();
       } else {
         focusQuals = [];
         state.qualEdges = [];
@@ -900,8 +966,8 @@
     document.querySelectorAll("[data-act=children]").forEach((button) => button.setAttribute("aria-pressed", childrenShown() ? "true" : "false"));
     document.querySelectorAll("[data-act=siblings]").forEach((button) => button.setAttribute("aria-pressed", siblingsShown() ? "true" : "false"));
     document.querySelectorAll("[data-act=ancestors]").forEach((button) => button.setAttribute("aria-pressed", state.ancestorsOnly ? "true" : "false"));
-    document.querySelectorAll("[data-act=rels]").forEach((button) => button.setAttribute("aria-pressed", state.rels.size ? "true" : "false"));
-    document.querySelectorAll("[data-act=quals]").forEach((button) => button.setAttribute("aria-pressed", state.quals.size ? "true" : "false"));
+    document.querySelectorAll("[data-act=rels]").forEach((button) => button.setAttribute("aria-pressed", state.relOn ? "true" : "false"));
+    document.querySelectorAll("[data-act=quals]").forEach((button) => button.setAttribute("aria-pressed", state.qualOn ? "true" : "false"));
   }
   function applyAction(act) {
     if (act === "children") {
@@ -913,18 +979,28 @@
     } else if (act === "ancestors") {
       state.ancestorsOnly = !state.ancestorsOnly;
     } else if (act === "rels") {
-      const kinds = [...new Set(focusRels.map((edge) => edge.prop))];
-      const allOn = kinds.length > 0 && kinds.every((kind) => state.rels.has(kind));
-      state.rels = allOn ? new Set() : new Set(kinds);
+      if (state.relOn) {
+        state.relOn = false;
+      } else {
+        state.relOn = true;
+        if (!state.rels.size && focusRels.length) {
+          state.rels = new Set(OG.defaultEdgeKeys(focusRels));
+        }
+      }
       if (panelEl.classList.contains("is-collapsed")) setPanelOpen(true);
       applyRelSelection();
       const section = document.getElementById("rel-section");
       if (section) section.scrollIntoView({ block: "nearest" });
       return;
     } else if (act === "quals") {
-      const kinds = [...new Set(focusQuals.map((edge) => edge.prop))];
-      const allOn = kinds.length > 0 && kinds.every((kind) => state.quals.has(kind));
-      state.quals = allOn ? new Set() : new Set(kinds);
+      if (state.qualOn) {
+        state.qualOn = false;
+      } else {
+        state.qualOn = true;
+        if (!state.quals.size && focusQuals.length) {
+          state.quals = new Set(OG.defaultEdgeKeys(focusQuals));
+        }
+      }
       if (panelEl.classList.contains("is-collapsed")) setPanelOpen(true);
       applyQualSelection();
       const section = document.getElementById("qual-section");
