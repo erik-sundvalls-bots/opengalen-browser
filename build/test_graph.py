@@ -32,11 +32,11 @@ def load_graph():
 
     name_off = take(n + 1)
     par_off = take(n + 1)
-    _kid_off = take(n + 1)
-    _eq_off = take(n + 1)
+    kid_off = take(n + 1)
+    eq_off = take(n + 1)
     par_ids = take(n_edges)
-    take(n_edges)
-    take(n_eq)
+    kid_ids = take(n_edges)
+    eq_ids = take(n_eq)
     take(n_roots)
     offset += n + n  # module, generated
     blob = raw[offset : offset + name_bytes]
@@ -51,6 +51,10 @@ def load_graph():
         "name": name,
         "par_off": par_off,
         "par_ids": par_ids,
+        "kid_off": kid_off,
+        "kid_ids": kid_ids,
+        "eq_off": eq_off,
+        "eq_ids": eq_ids,
     }
 
 
@@ -167,6 +171,68 @@ class GraphTests(unittest.TestCase):
         for name in ("Heart", "Hand", "Femur", "Thumb"):
             self.assertFalse(reaches(name, "Adenoma"), name)
         self.assertTrue(reaches("VillousAdenoma", "Adenoma"))
+
+    def test_thumb_pollux_equivalents_merge(self):
+        # The classified dump hangs every implies line on Pollux; Thumb is the
+        # second GRAIL name of the same expression and has no is-a links of its
+        # own. The browser merges the group. Canonical name: most parent+child
+        # links, ties broken alphabetically.
+        wanted = {"Thumb", "Pollux", "Finger", "SupernumeraryThumb"}
+        index = {}
+        for i in range(self.g["n"]):
+            name = self.g["name"](i)
+            if name in wanted:
+                index[name] = i
+                if len(index) == len(wanted):
+                    break
+        self.assertEqual(set(index), wanted)
+        thumb, pollux = index["Thumb"], index["Pollux"]
+
+        def row(off_key, ids_key, i):
+            off, ids = self.g[off_key], self.g[ids_key]
+            return list(ids[off[i] : off[i + 1]])
+
+        def names_of(ids):
+            return {self.g["name"](j) for j in ids}
+
+        self.assertEqual(row("par_off", "par_ids", thumb), [])
+        self.assertEqual(row("kid_off", "kid_ids", thumb), [])
+        self.assertEqual(names_of(row("eq_off", "eq_ids", thumb)), {"Pollux"})
+        self.assertEqual(names_of(row("eq_off", "eq_ids", pollux)), {"Thumb"})
+        self.assertIn("Finger", names_of(row("par_off", "par_ids", pollux)))
+        self.assertIn("SupernumeraryThumb", names_of(row("kid_off", "kid_ids", pollux)))
+
+        def rel_count(i):
+            return (self.g["par_off"][i + 1] - self.g["par_off"][i]) + (
+                self.g["kid_off"][i + 1] - self.g["kid_off"][i]
+            )
+
+        def members(i):
+            return [i] + row("eq_off", "eq_ids", i)
+
+        def canonical(i):
+            def key(j):
+                return (-rel_count(j), self.g["name"](j).lower(), self.g["name"](j))
+
+            return sorted(members(i), key=key)[0]
+
+        self.assertGreater(rel_count(pollux), rel_count(thumb))
+        self.assertEqual(self.g["name"](canonical(thumb)), "Pollux")
+        self.assertEqual(canonical(thumb), canonical(pollux))
+
+        def merged(i, off_key, ids_key):
+            group = set(members(i))
+            out = set()
+            for m in group:
+                for other in row(off_key, ids_key, m):
+                    if other not in group:
+                        out.add(canonical(other))
+            return {self.g["name"](j) for j in out}
+
+        self.assertIn("Finger", merged(thumb, "par_off", "par_ids"))
+        self.assertEqual(merged(thumb, "par_off", "par_ids"), merged(pollux, "par_off", "par_ids"))
+        self.assertIn("SupernumeraryThumb", merged(thumb, "kid_off", "kid_ids"))
+        self.assertEqual(merged(thumb, "kid_off", "kid_ids"), merged(pollux, "kid_off", "kid_ids"))
 
     def test_anaemia_definition_is_grail_like(self):
         index = {}

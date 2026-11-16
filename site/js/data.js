@@ -105,7 +105,123 @@
       byName.set(names[i], i);
     }
     const order = names.map((_, i) => i).sort((a, b) => names[a].toLowerCase() < names[b].toLowerCase() ? -1 : names[a].toLowerCase() > names[b].toLowerCase() ? 1 : a - b);
-    return { n, names, parents, children, equiv, mod, gen, byName, order };
+    const graph = { n, names, parents, children, equiv, mod, gen, byName, order };
+    attachCanon(graph);
+    return graph;
+  }
+
+  /* Canonical name of an equivalence group: most classified is-a relations
+     (parent links plus child links); ties broken alphabetically
+     (case-insensitive, then the original string). The URL hash keeps the
+     name the user opened; the canonical name is the representative when the
+     group appears as a neighbour of another concept. */
+  function relationCount(graph, id) {
+    return graph.parents[id].length + graph.children[id].length;
+  }
+
+  function compareCanon(graph, a, b) {
+    const ra = relationCount(graph, a);
+    const rb = relationCount(graph, b);
+    if (rb !== ra) return rb - ra;
+    const na = graph.names[a].toLowerCase();
+    const nb = graph.names[b].toLowerCase();
+    if (na !== nb) return na < nb ? -1 : 1;
+    if (graph.names[a] !== graph.names[b]) return graph.names[a] < graph.names[b] ? -1 : 1;
+    return a - b;
+  }
+
+  function attachCanon(graph) {
+    const { n, equiv } = graph;
+    const canon = new Array(n);
+    for (let i = 0; i < n; i++) {
+      if (canon[i] != null) continue;
+      const members = [i].concat(equiv[i]);
+      members.sort((a, b) => compareCanon(graph, a, b));
+      const chosen = members[0];
+      for (const m of members) canon[m] = chosen;
+    }
+    graph.canon = canon;
+    return graph;
+  }
+
+  function equivMembers(graph, id) {
+    const others = graph.equiv[id];
+    return others && others.length ? [id].concat(others) : [id];
+  }
+
+  function groupHeading(graph, id) {
+    return equivMembers(graph, id).map((i) => graph.names[i]).join(" = ");
+  }
+
+  function neighbourLabel(graph, id) {
+    const members = equivMembers(graph, id);
+    if (members.length === 1) return graph.names[id];
+    const c = graph.canon[id];
+    const names = [graph.names[c]].concat(members.filter((i) => i !== c).map((i) => graph.names[i]));
+    const joined = names.join(" = ");
+    if (names.length <= 3 && joined.length <= 48) return joined;
+    return graph.names[c];
+  }
+
+  function nodeLabel(graph, id, focus) {
+    return id === focus ? groupHeading(graph, id) : neighbourLabel(graph, id);
+  }
+
+  function nameSort(graph, ids) {
+    ids.sort((a, b) => {
+      const na = graph.names[a].toLowerCase();
+      const nb = graph.names[b].toLowerCase();
+      if (na !== nb) return na < nb ? -1 : 1;
+      return a - b;
+    });
+    return ids;
+  }
+
+  function collapsedHierarchy(graph, focus) {
+    const { parents, children, canon } = graph;
+    const focusGroup = new Set(equivMembers(graph, focus));
+    function rep(id) {
+      return focusGroup.has(id) ? focus : canon[id];
+    }
+    const upCache = new Map();
+    const downCache = new Map();
+    function parentsOf(id) {
+      let out = upCache.get(id);
+      if (out) return out;
+      const members = equivMembers(graph, id);
+      const seen = new Set();
+      out = [];
+      for (const m of members) {
+        for (const p of parents[m]) {
+          const r = rep(p);
+          if (members.includes(p) || r === rep(id) || seen.has(r)) continue;
+          seen.add(r);
+          out.push(r);
+        }
+      }
+      nameSort(graph, out);
+      upCache.set(id, out);
+      return out;
+    }
+    function childrenOf(id) {
+      let out = downCache.get(id);
+      if (out) return out;
+      const members = equivMembers(graph, id);
+      const seen = new Set();
+      out = [];
+      for (const m of members) {
+        for (const child of children[m]) {
+          const r = rep(child);
+          if (members.includes(child) || r === rep(id) || seen.has(r)) continue;
+          seen.add(r);
+          out.push(r);
+        }
+      }
+      nameSort(graph, out);
+      downCache.set(id, out);
+      return out;
+    }
+    return { rep, parentsOf, childrenOf, focusGroup };
   }
 
   function parseSearch(buf) {
@@ -308,4 +424,9 @@
   OG.loadRels = loadRels;
   OG.searchConcepts = searchConcepts;
   OG.spaced = spaced;
+  OG.equivMembers = equivMembers;
+  OG.groupHeading = groupHeading;
+  OG.neighbourLabel = neighbourLabel;
+  OG.nodeLabel = nodeLabel;
+  OG.collapsedHierarchy = collapsedHierarchy;
 })();

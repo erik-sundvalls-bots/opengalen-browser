@@ -11,7 +11,9 @@
   }
   document.getElementById("about-btn").addEventListener("click", openAbout);
   about.addEventListener("close", () => { if (model) draw(); });
-  openAbout();
+  // A permalink or query that already names a concept skips the automatic
+  // About dialog. A plain visit still opens it. The About button always can.
+  if (!requestedName()) openAbout();
 
   function setPanelOpen(open) {
     panelEl.classList.toggle("is-collapsed", !open);
@@ -51,7 +53,22 @@
 
   function hashName() {
     const match = /^#concept=(.*)$/.exec(location.hash);
-    return match ? decodeURIComponent(match[1]) : "";
+    if (!match || !match[1]) return "";
+    try { return decodeURIComponent(match[1]); } catch (err) { return match[1]; }
+  }
+
+  function queryName() {
+    try {
+      const value = new URLSearchParams(location.search).get("concept");
+      return value ? String(value).trim() : "";
+    } catch (err) {
+      return "";
+    }
+  }
+
+  /* Hash #concept=Name wins; otherwise ?concept=Name. Empty means a plain visit. */
+  function requestedName() {
+    return hashName() || queryName();
   }
 
   function go(name, push) {
@@ -76,7 +93,7 @@
     hideInfo();
     state.focus = id;
     state.relEdges = [];
-    document.title = name + " · OpenGALEN 8";
+    document.title = OG.groupHeading(model.graph, id) + " · OpenGALEN 8";
     draw();
     fillPanel(id);
     loadFocusRels(id);
@@ -84,8 +101,19 @@
 
   async function loadFocusRels(id) {
     const token = ++relToken;
-    let rows = [];
-    try { rows = await OG.loadRels(model, id); } catch (err) { rows = []; }
+    const members = OG.equivMembers(model.graph, id);
+    const rows = [];
+    const seen = new Set();
+    for (const mid of members) {
+      let part = [];
+      try { part = await OG.loadRels(model, mid); } catch (err) { part = []; }
+      for (const edge of part) {
+        const key = edge.prop + ":" + model.graph.canon[edge.target];
+        if (seen.has(key)) continue;
+        seen.add(key);
+        rows.push(edge);
+      }
+    }
     if (token !== relToken || state.focus !== id) return;
     focusRels = rows;
     state.relEdges = rows.filter((edge) => state.rels.has(edge.prop));
@@ -102,7 +130,7 @@
       const g = model.graph;
       const hiddenKids = lastView.childHidden;
       setStatus(
-        OG.spaced(g.names[state.focus])
+        OG.spaced(OG.groupHeading(g, state.focus))
         + " · " + lastView.ancestorCount + " ancestors"
         + (state.ancestorsOnly ? " · ancestors only" : state.children === false ? " · children hidden" : hiddenKids ? " · " + hiddenKids + " generated children hidden" : "")
       );
@@ -223,7 +251,7 @@
     if (node.kind === "cluster") return "+" + node.members.length;
     if (node.kind === "more") return "+" + node.count + " more";
     if (node.kind !== "concept") return "";
-    return OG.spaced(model.graph.names[node.concept]);
+    return OG.spaced(OG.nodeLabel(model.graph, node.concept, state.focus));
   }
 
   function neighbourhood(d, view, up, down) {
@@ -262,7 +290,7 @@
     d3.select("#g").selectAll(".node").each(function (node) {
       if (!near.labelKeys.has(node.key) || node.kind !== "concept") return;
       if (node.lines && node.lines.length) return;
-      const name = OG.spaced(model.graph.names[node.concept]);
+      const name = OG.spaced(OG.nodeLabel(model.graph, node.concept, state.focus));
       const cut = name.length > 22 ? name.lastIndexOf(" ", 22) : -1;
       const parts = cut > 8 ? [name.slice(0, cut).trim(), name.slice(cut + 1).trim()] : [name];
       const text = d3.select(this).append("text")
@@ -310,7 +338,7 @@
       return "<b>+" + d.members.length + "</b> " + names.join(", ") + more;
     }
     if (d.kind === "more") return "+" + d.count + " children";
-    const title = "<b>" + escapeHtml(OG.spaced(model.graph.names[d.concept])) + "</b>";
+    const title = "<b>" + escapeHtml(OG.spaced(OG.nodeLabel(model.graph, d.concept, state.focus))) + "</b>";
     if (state.labels) return title;
     const near = neighbourhood(d, view, up, down);
     const rows = [title];
@@ -505,10 +533,48 @@
     paintRelSection();
   }
 
+  function mergeRecords(members, recs, g) {
+    const canon = g.canon[members[0]];
+    const order = [canon, ...members.filter((m) => m !== canon)];
+    const byId = new Map(members.map((m, i) => [m, recs[i]]));
+    function pick(key, pred) {
+      let fallback = null;
+      for (const m of order) {
+        const rec = byId.get(m);
+        if (!rec || rec[key] == null || rec[key] === "") continue;
+        if (!pred || pred(rec[key])) return rec[key];
+        if (fallback == null) fallback = rec[key];
+      }
+      return fallback;
+    }
+    const q = [];
+    const qSeen = new Set();
+    for (const m of order) {
+      const rec = byId.get(m);
+      if (!rec || !rec.q) continue;
+      for (const phrase of rec.q) {
+        if (qSeen.has(phrase)) continue;
+        qSeen.add(phrase);
+        q.push(phrase);
+      }
+    }
+    return {
+      d: pick("d", (text) => !/^equivalent to /.test(text)),
+      s: pick("s"),
+      r: pick("r"),
+      l: pick("l"),
+      f: pick("f"),
+      g: pick("g"),
+      q: q.length ? q : null,
+    };
+  }
+
   function fillPanel(id) {
     const token = ++panelToken;
     const g = model.graph;
     const name = g.names[id];
+    const members = OG.equivMembers(g, id);
+    const hier = OG.collapsedHierarchy(g, id);
     const moduleName = model.meta.modules[g.mod[id]] || "Unspecified";
     const label = model.labels[String(id)];
     hideInfo();
@@ -517,11 +583,17 @@
     kicker.className = "kicker";
     kicker.textContent = moduleName;
     const title = document.createElement("h2");
-    title.textContent = label || OG.spaced(name);
+    title.textContent = members.length > 1 ? OG.spaced(OG.groupHeading(g, id)) : (label || OG.spaced(name));
     const official = document.createElement("p");
     official.className = "official";
-    official.innerHTML = "<code>" + escapeHtml(name) + "</code>";
+    official.innerHTML = members.map((mid) => "<code>" + escapeHtml(g.names[mid]) + "</code>").join(" = ");
     panel.append(kicker, title, official);
+    if (members.length > 1 && label && label !== title.textContent) {
+      const p = document.createElement("p");
+      p.className = "muted";
+      p.textContent = "Language note: " + label;
+      official.after(p);
+    }
     const relSlot = section("Relationships", "Dashed arrows are definition roles, pointing at the filler. Is-a links have no arrowheads. The same colour on a sanction, or in the GRAIL source, names that role but is not drawn: a sanction says what is allowed, and a definition link says what this concept has. Every selected target is climbed by is-a to the root, and clustering folds the shared ancestors. A nested filler is one edge to its genus; the nesting stays in the definition text.");
     relSlot.el.id = "rel-section";
     relSlot.body.id = "rel-box";
@@ -534,26 +606,31 @@
     const grailSlot = section("GRAIL source");
     qualSlot.el.hidden = rubricSlot.el.hidden = grailSlot.el.hidden = true;
 
-    const parents = g.parents[id];
+    const parents = hier.parentsOf(id);
     const parentSlot = section("Parents");
     const shownParents = parents.filter((pid) => state.showGen || !g.gen[pid]);
     const hiddenParents = parents.length - shownParents.length;
     fillLinks(parentSlot.body, shownParents);
     if (hiddenParents) note(parentSlot.body, hiddenParents + (hiddenParents === 1 ? " generated parent hidden" : " generated parents hidden"), "Turn on “Show generated classes” to list them.");
 
-    const kids = g.children[id].filter((cid) => state.showGen || !g.gen[cid]);
-    const hiddenKids = g.children[id].length - kids.length;
+    const allKids = hier.childrenOf(id);
+    const kids = allKids.filter((cid) => state.showGen || !g.gen[cid]);
+    const hiddenKids = allKids.length - kids.length;
     const childSlot = section("Children");
     const filter = document.createElement("input");
     filter.id = "child-filter";
-    filter.placeholder = "Filter " + g.children[id].length + " children";
+    filter.placeholder = "Filter " + allKids.length + " children";
     filter.setAttribute("aria-label", "Filter children");
     const childList = document.createElement("ul");
     childList.className = "links";
     childSlot.body.append(filter, childList);
     const paintKids = () => {
       const needle = filter.value.trim().toLowerCase();
-      const matched = kids.filter((cid) => !needle || g.names[cid].toLowerCase().includes(needle) || OG.spaced(g.names[cid]).toLowerCase().includes(needle)).slice(0, 80);
+      const matched = kids.filter((cid) => {
+        if (!needle) return true;
+        const hay = (OG.groupHeading(g, cid) + " " + OG.spaced(OG.groupHeading(g, cid))).toLowerCase();
+        return hay.includes(needle);
+      }).slice(0, 80);
       fillLinks(childList, matched);
       if (kids.length > matched.length) note(childList, "Showing " + matched.length + " of " + kids.length + ".");
     };
@@ -561,12 +638,31 @@
     paintKids();
     if (hiddenKids) note(childSlot.body, hiddenKids + (hiddenKids === 1 ? " generated child hidden" : " generated children hidden"), "Turn on “Show generated classes” to list them.");
 
-    const eqSlot = section("Equivalents");
-    if (g.equiv[id].length) fillLinks(eqSlot.body, g.equiv[id]);
-    else eqSlot.el.hidden = true;
+    if (members.length > 1) {
+      const namesSlot = section("Names", "These names are one concept in the classified hierarchy. The canonical name is the member with the most is-a relations (parents plus children); ties are broken alphabetically. Opening any name shows this same group; the address keeps the name you opened.");
+      const list = document.createElement("ul");
+      list.className = "links";
+      for (const mid of members) {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = "#concept=" + encodeURIComponent(g.names[mid]);
+        a.textContent = OG.spaced(g.names[mid]);
+        a.title = g.names[mid];
+        li.append(a);
+        if (mid === g.canon[id]) {
+          const mark = document.createElement("span");
+          mark.className = "muted";
+          mark.textContent = " (canonical)";
+          li.append(mark);
+        }
+        list.append(li);
+      }
+      namesSlot.body.append(list);
+    }
 
-    OG.loadRecord(model, id).then((rec) => {
+    Promise.all(members.map((mid) => OG.loadRecord(model, mid))).then((recs) => {
       if (token !== panelToken) return;
+      const rec = mergeRecords(members, recs, g);
       if (rec && rec.s) kicker.textContent = moduleName + " · " + rec.s;
       if (!rec || !rec.d) {
         defSlot.body.textContent = "None published.";
@@ -612,7 +708,7 @@
         paintColored(pre, rec.g);
         grailSlot.body.append(pre);
       }
-      if (rec && rec.l && rec.l !== title.textContent) {
+      if (rec && rec.l && rec.l !== title.textContent && rec.l !== (model.labels[String(id)] || "")) {
         const p = document.createElement("p");
         p.className = "muted";
         p.textContent = "Language note: " + rec.l;
@@ -652,8 +748,8 @@
       const li = document.createElement("li");
       const a = document.createElement("a");
       a.href = "#concept=" + encodeURIComponent(model.graph.names[id]);
-      a.textContent = OG.spaced(model.graph.names[id]);
-      a.title = model.graph.names[id];
+      a.textContent = OG.spaced(OG.neighbourLabel(model.graph, id));
+      a.title = OG.groupHeading(model.graph, id);
       if (model.graph.gen[id]) a.className = "gen";
       li.append(a);
       list.append(li);
@@ -762,10 +858,14 @@
       const strong = document.createElement("span");
       strong.textContent = OG.spaced(model.graph.names[id]);
       button.append(strong);
+      const alias = model.graph.equiv[id];
       const label = model.labels[String(id)];
-      if (label) {
+      const notes = [];
+      if (alias && alias.length) notes.push("= " + alias.map((eid) => model.graph.names[eid]).join(" = "));
+      if (label) notes.push(label);
+      if (notes.length) {
         const small = document.createElement("small");
-        small.textContent = label;
+        small.textContent = notes.join(" · ");
         button.append(small);
       }
       button.addEventListener("mousedown", (event) => {
@@ -832,9 +932,14 @@
       aboutCounts.textContent = counts.concepts.toLocaleString() + " concepts and "
         + counts.uniqueParentLinks.toLocaleString() + " parent links, from the with-property-chains hierarchy.";
     }
-    const named = hashName();
+    const named = requestedName();
     const start = named && model.graph.byName.has(named) ? named : model.meta.defaultConcept;
-    if (!named) history.replaceState(null, "", "#concept=" + encodeURIComponent(start));
+    if (!hashName() && start) {
+      const url = new URL(location.href);
+      url.searchParams.delete("concept");
+      const search = url.searchParams.toString();
+      history.replaceState(null, "", url.pathname + (search ? "?" + search : "") + "#concept=" + encodeURIComponent(start));
+    }
     showFocus(start);
   }).catch((err) => {
     setStatus(err.message || String(err));
