@@ -1,6 +1,6 @@
 # OpenGALEN 8 extraction checks
 
-Built 2026-11-15T08:31:17Z.
+Built 2026-11-16T14:48:00Z.
 
 ## Counts
 
@@ -23,10 +23,14 @@ Built 2026-11-15T08:31:17Z.
 | pass | Thumb does not have ancestor Adenoma |
 | pass | VillousAdenoma still has ancestor Adenoma |
 | pass | known cyclic implies edges dropped: 5 (expected 5) |
+| pass | first and OrdinalPositionValueType are in the graph |
+| pass | first has told OWL parent OrdinalPositionValueType (omitted from the dump) |
+| pass | first reaches SymbolicValueType via the restored value-type chain |
+| pass | told value-type parents restored: 22 |
 
 ## Sizes
 
-- graph.bin.gz: 2,719,672 bytes
+- graph.bin.gz: 2,719,741 bytes
 - search.bin.gz: 3,122,406 bytes
 - labels.json.gz: 41,921 bytes
 - definition shards: 246 files, 3,114,691 bytes
@@ -55,5 +59,30 @@ Five narrower generated-class inversions are still in the graph and were not cha
 - `Tachycardia` implies `TemporalFeaturewhichinvolvesHearthasPathologicalStatuspathological` (kept)
 - `SupraventricularTachycardia` implies `TemporalFeaturewhichinvolvesDepolarisationwhichisSpecificFunctionOfAtrialStructurehasPathologicalStatuspathological` (kept)
 - `SinusTachycardia` implies `TemporalFeaturewhichinvolvesSinoAtrialNodeDepolarisationhasPathologicalStatuspathological` (kept)
+
+The classified dump has no `implies` line for the GRAIL ordinal-position selectors (`OrdinalPositionValueType newSub [first second … fifteenth]` in `GRAIL_Sources/64-3434624046.grl`) or for some other parentless `*ValueType` leaves. The told OWL axioms are present, e.g. `SubClassOf(first OrdinalPositionValueType)` in `OpenGALEN8_FoundationModel_TopClassesForMedicalDomain.owl` line 1763, and `SubClassOf(OrdinalPositionValueType SymbolicValueType)` in `OpenGALEN8_GenericModel.owl` line 156. Those told parents are restored when the dump left the child with none (22 links):
+
+- `DateValueType` ⊑ `MagnitudeValueType` (told OWL, omitted from the dump)
+- `FractionalRange` ⊑ `ImpreciseNumberValueType` (told OWL, omitted from the dump)
+- `ImpreciseNumberValueType` ⊑ `MagnitudeValueType` (told OWL, omitted from the dump)
+- `NumberValueType` ⊑ `MagnitudeValueType` (told OWL, omitted from the dump)
+- `NumericalRangeValueType` ⊑ `MagnitudeValueType` (told OWL, omitted from the dump)
+- `OrdinalPositionValueType` ⊑ `SymbolicValueType` (told OWL, omitted from the dump)
+- `eighth` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `eleventh` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `fifteenth` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `fifth` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `first` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `fourteenth` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `fourth` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `ninth` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `oneOrMore` ⊑ `ImpreciseNumberValueType` (told OWL, omitted from the dump)
+- `second` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `seventh` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `sixth` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `tenth` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `third` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `thirteenth` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
+- `twelvth` ⊑ `OrdinalPositionValueType` (told OWL, omitted from the dump)
 
 `PulmonaryAtresiaWithVentricularSeptalDefect` is not a direct child of `PhenomenonwhichinvolvesHeart` in the dump. Walking parents does reach that concept, and no OWL `SubClassOf` axiom states the pair. Direct spot-check: `PulmonaryAtresia` implies `CongenitalPathologywhichinvolvesHeartChamber`.

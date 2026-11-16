@@ -110,24 +110,58 @@
     return graph;
   }
 
-  /* Canonical name of an equivalence group: most classified is-a relations
-     (parent links plus child links); ties broken alphabetically
-     (case-insensitive, then the original string). The URL hash keeps the
-     name the user opened; the canonical name is the representative when the
-     group appears as a neighbour of another concept. */
+  /* Canonical name of an equivalence group:
+     1. Prefer a name that does not contain "which" (short readable names
+        such as MentalDisease beat a long inferred which-class).
+     2. Then the member with the most classified is-a relations (parent
+        links plus child links).
+     3. Then the shorter official name.
+     4. Ties broken alphabetically (case-insensitive, then the original
+        string).
+     The URL hash keeps the name the user opened; the canonical name is
+     the representative when the group appears as a neighbour.
+     The dump's BannedKnowledgeNames bag (ZootleWordle, Base, Tonsil, …)
+     is not merged: those names are marked equivalent because they are
+     ambiguous, not because they are one concept. */
   function relationCount(graph, id) {
     return graph.parents[id].length + graph.children[id].length;
   }
 
+  function isWhichStyle(name) {
+    return name.indexOf("which") >= 0;
+  }
+
   function compareCanon(graph, a, b) {
+    const wa = isWhichStyle(graph.names[a]) ? 1 : 0;
+    const wb = isWhichStyle(graph.names[b]) ? 1 : 0;
+    if (wa !== wb) return wa - wb;
     const ra = relationCount(graph, a);
     const rb = relationCount(graph, b);
     if (rb !== ra) return rb - ra;
+    const la = graph.names[a].length;
+    const lb = graph.names[b].length;
+    if (la !== lb) return la - lb;
     const na = graph.names[a].toLowerCase();
     const nb = graph.names[b].toLowerCase();
     if (na !== nb) return na < nb ? -1 : 1;
     if (graph.names[a] !== graph.names[b]) return graph.names[a] < graph.names[b] ? -1 : 1;
     return a - b;
+  }
+
+  function rawEquivalents(graph, id) {
+    const others = graph.equiv[id];
+    return others && others.length ? [id].concat(others) : [id];
+  }
+
+  function isBannedBag(graph, id) {
+    const members = rawEquivalents(graph, id);
+    for (const m of members) {
+      if (graph.names[m] === "ZootleWordle") return true;
+      for (const p of graph.parents[m]) {
+        if (graph.names[p] === "BannedKnowledgeNames") return true;
+      }
+    }
+    return false;
   }
 
   function attachCanon(graph) {
@@ -136,6 +170,10 @@
     for (let i = 0; i < n; i++) {
       if (canon[i] != null) continue;
       const members = [i].concat(equiv[i]);
+      if (isBannedBag(graph, i)) {
+        for (const m of members) canon[m] = m;
+        continue;
+      }
       members.sort((a, b) => compareCanon(graph, a, b));
       const chosen = members[0];
       for (const m of members) canon[m] = chosen;
@@ -145,8 +183,42 @@
   }
 
   function equivMembers(graph, id) {
-    const others = graph.equiv[id];
-    return others && others.length ? [id].concat(others) : [id];
+    if (isBannedBag(graph, id)) return [id];
+    return rawEquivalents(graph, id);
+  }
+
+  const QUAL_PREFIXES = [
+    "sensiblyAndTopicNecessarily",
+    "grammaticallyAndTopicNecessarily",
+    "grammaticallyAndSensibly",
+    "topicNecessarily",
+    "sensibly",
+    "grammatically",
+  ];
+  const QUAL_COLOR = "#9a3d6b";
+  const QUAL_CAP = 16;
+
+  function parseQualPhrase(phrase, byName) {
+    const text = String(phrase || "").trim();
+    if (!text) return null;
+    let rest = text;
+    let kind = "sanction";
+    for (let i = 0; i < QUAL_PREFIXES.length; i++) {
+      const prefix = QUAL_PREFIXES[i];
+      if (rest.startsWith(prefix + " ")) {
+        kind = prefix;
+        rest = rest.slice(prefix.length + 1);
+        break;
+      }
+    }
+    const space = rest.indexOf(" ");
+    if (space < 1) return null;
+    const role = rest.slice(0, space);
+    const targetName = rest.slice(space + 1).trim();
+    if (!role || !targetName || !byName) return null;
+    const target = byName.get(targetName);
+    if (target == null) return null;
+    return { kind, role, prop: role, target, targetName, phrase: text, color: QUAL_COLOR };
   }
 
   function groupHeading(graph, id) {
@@ -425,8 +497,14 @@
   OG.searchConcepts = searchConcepts;
   OG.spaced = spaced;
   OG.equivMembers = equivMembers;
+  OG.rawEquivalents = rawEquivalents;
+  OG.isBannedBag = isBannedBag;
   OG.groupHeading = groupHeading;
   OG.neighbourLabel = neighbourLabel;
   OG.nodeLabel = nodeLabel;
   OG.collapsedHierarchy = collapsedHierarchy;
+  OG.parseQualPhrase = parseQualPhrase;
+  OG.QUAL_COLOR = QUAL_COLOR;
+  OG.QUAL_CAP = QUAL_CAP;
+  OG.QUAL_PREFIXES = QUAL_PREFIXES;
 })();

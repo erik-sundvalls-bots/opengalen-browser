@@ -356,6 +356,7 @@ svg text { pointer-events: none; }
   border-width: 4px 0 4px 7px;
   border-color: transparent transparent transparent currentColor;
 }
+.qual-swatch { border-top-style: dotted; }
 .rel-kind { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; }
 .rel-group { margin: 8px 0 2px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .rel-actions { display: flex; gap: 6px; margin-bottom: 4px; }

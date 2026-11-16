@@ -175,8 +175,8 @@ class GraphTests(unittest.TestCase):
     def test_thumb_pollux_equivalents_merge(self):
         # The classified dump hangs every implies line on Pollux; Thumb is the
         # second GRAIL name of the same expression and has no is-a links of its
-        # own. The browser merges the group. Canonical name: most parent+child
-        # links, ties broken alphabetically.
+        # own. The browser merges the group. Canonical name: prefer a name
+        # without 'which', then most parent+child links, then shorter, then alphabetical.
         wanted = {"Thumb", "Pollux", "Finger", "SupernumeraryThumb"}
         index = {}
         for i in range(self.g["n"]):
@@ -212,7 +212,14 @@ class GraphTests(unittest.TestCase):
 
         def canonical(i):
             def key(j):
-                return (-rel_count(j), self.g["name"](j).lower(), self.g["name"](j))
+                name = self.g["name"](j)
+                return (
+                    1 if "which" in name else 0,
+                    -rel_count(j),
+                    len(name),
+                    name.lower(),
+                    name,
+                )
 
             return sorted(members(i), key=key)[0]
 
@@ -233,6 +240,189 @@ class GraphTests(unittest.TestCase):
         self.assertEqual(merged(thumb, "par_off", "par_ids"), merged(pollux, "par_off", "par_ids"))
         self.assertIn("SupernumeraryThumb", merged(thumb, "kid_off", "kid_ids"))
         self.assertEqual(merged(thumb, "kid_off", "kid_ids"), merged(pollux, "kid_off", "kid_ids"))
+
+    def test_banned_knowledge_names_are_not_merged(self):
+        # The dump marks ZootleWordle / Base / BoneMarrow / Clipping / Fornix /
+        # Tonsil / Tubercle equivalent under BannedKnowledgeNames because those
+        # GRAIL names are ambiguous. The browser must keep them as separate
+        # nodes. Only Tubercle has the BannedKnowledgeNames parent.
+        bag = {
+            "ZootleWordle",
+            "Base",
+            "BoneMarrow",
+            "Clipping",
+            "Fornix",
+            "Tonsil",
+            "Tubercle",
+        }
+        index = {}
+        for i in range(self.g["n"]):
+            name = self.g["name"](i)
+            if name in bag or name == "BannedKnowledgeNames":
+                index[name] = i
+                if len(index) == len(bag) + 1:
+                    break
+        self.assertEqual(set(index), bag | {"BannedKnowledgeNames"})
+
+        def row(off_key, ids_key, i):
+            off, ids = self.g[off_key], self.g[ids_key]
+            return list(ids[off[i] : off[i + 1]])
+
+        def names_of(ids):
+            return {self.g["name"](j) for j in ids}
+
+        def raw_members(i):
+            return [i] + row("eq_off", "eq_ids", i)
+
+        def is_banned_bag(i):
+            for m in raw_members(i):
+                if self.g["name"](m) == "ZootleWordle":
+                    return True
+                if "BannedKnowledgeNames" in names_of(row("par_off", "par_ids", m)):
+                    return True
+            return False
+
+        for name in bag:
+            self.assertTrue(is_banned_bag(index[name]), name)
+            # Dump equivalents are still recorded, but the merge rule uses only self.
+            others = names_of(row("eq_off", "eq_ids", index[name]))
+            self.assertTrue(others & bag, name)
+        self.assertEqual(
+            names_of(row("par_off", "par_ids", index["Tubercle"])),
+            {"BannedKnowledgeNames"},
+        )
+        self.assertEqual(row("par_off", "par_ids", index["Tonsil"]), [])
+        self.assertEqual(row("par_off", "par_ids", index["Base"]), [])
+
+    def test_mentaldisease_is_preferred_canonical(self):
+        wanted = {
+            "MentalDisease",
+            "MentalDisorder",
+            "PathologicalPhenomenonwhichinvolvesMentalSystem",
+        }
+        index = {}
+        for i in range(self.g["n"]):
+            name = self.g["name"](i)
+            if name in wanted or name.startswith("Mental") or name.startswith("Psychiatric") or name == "PsychologicalDisorder":
+                if "which" in name and name != "PathologicalPhenomenonwhichinvolvesMentalSystem":
+                    continue
+            if name in wanted:
+                index[name] = i
+                if len(index) == len(wanted):
+                    break
+        # Also collect the whole raw group from MentalDisease.
+        def row(off_key, ids_key, i):
+            off, ids = self.g[off_key], self.g[ids_key]
+            return list(ids[off[i] : off[i + 1]])
+
+        disease = None
+        for i in range(self.g["n"]):
+            if self.g["name"](i) == "MentalDisease":
+                disease = i
+                break
+        self.assertIsNotNone(disease)
+        members = [disease] + row("eq_off", "eq_ids", disease)
+        names = [self.g["name"](j) for j in members]
+        self.assertIn("MentalDisease", names)
+        self.assertIn("PathologicalPhenomenonwhichinvolvesMentalSystem", names)
+
+        def rel_count(i):
+            return (self.g["par_off"][i + 1] - self.g["par_off"][i]) + (
+                self.g["kid_off"][i + 1] - self.g["kid_off"][i]
+            )
+
+        def key(j):
+            name = self.g["name"](j)
+            return (1 if "which" in name else 0, -rel_count(j), len(name), name.lower(), name)
+
+        canon = sorted(members, key=key)[0]
+        self.assertEqual(self.g["name"](canon), "MentalDisease")
+        which = next(j for j in members if self.g["name"](j) == "PathologicalPhenomenonwhichinvolvesMentalSystem")
+        self.assertGreater(rel_count(which), rel_count(canon))
+
+    def test_first_has_restored_valuetype_parent(self):
+        wanted = {"first", "second", "OrdinalPositionValueType", "SymbolicValueType"}
+        index = {}
+        for i in range(self.g["n"]):
+            name = self.g["name"](i)
+            if name in wanted:
+                index[name] = i
+                if len(index) == len(wanted):
+                    break
+        self.assertEqual(set(index), wanted)
+        self.assertEqual(self.meta["counts"]["valueTypeParentsRestored"], 22)
+        offs, ids = self.g["par_off"], self.g["par_ids"]
+
+        def parent_names(i):
+            return {self.g["name"](p) for p in ids[offs[i] : offs[i + 1]]}
+
+        self.assertEqual(parent_names(index["first"]), {"OrdinalPositionValueType"})
+        self.assertEqual(parent_names(index["second"]), {"OrdinalPositionValueType"})
+        self.assertEqual(parent_names(index["OrdinalPositionValueType"]), {"SymbolicValueType"})
+
+        def reaches(child, parent):
+            target = index[parent]
+            seen = set()
+            stack = list(ids[offs[index[child]] : offs[index[child] + 1]])
+            while stack:
+                node = stack.pop()
+                if node in seen:
+                    continue
+                seen.add(node)
+                if node == target:
+                    return True
+                stack.extend(ids[offs[node] : offs[node + 1]])
+            return False
+
+        self.assertTrue(reaches("first", "SymbolicValueType"))
+
+    def test_pollux_qualifiers_parse_to_graph_targets(self):
+        # Sanction/qualifier phrases already stored for the panel must parse
+        # into role + filler edges the sanctions toggle can draw.
+        prefixes = (
+            "sensiblyAndTopicNecessarily",
+            "grammaticallyAndTopicNecessarily",
+            "grammaticallyAndSensibly",
+            "topicNecessarily",
+            "sensibly",
+            "grammatically",
+        )
+        by_name = {}
+        needed = {"Pollux", "PulpOfThumb", "ThumbNail"}
+        for i in range(self.g["n"]):
+            name = self.g["name"](i)
+            if name in needed:
+                by_name[name] = i
+                if len(by_name) == len(needed):
+                    break
+        shard = by_name["Pollux"] // self.meta["shardSize"]
+        recs = json.loads(gzip.decompress((DATA / "d" / f"{shard:04d}.json.gz").read_bytes()))
+        phrases = recs[str(by_name["Pollux"])]["q"]
+        self.assertEqual(
+            set(phrases),
+            {
+                "topicNecessarily hasSpecificStructuralComponent PulpOfThumb",
+                "topicNecessarily hasSpecificStructuralComponent ThumbNail",
+            },
+        )
+
+        def parse(phrase):
+            rest = phrase
+            kind = "sanction"
+            for prefix in prefixes:
+                if rest.startswith(prefix + " "):
+                    kind = prefix
+                    rest = rest[len(prefix) + 1 :]
+                    break
+            role, target = rest.split(" ", 1)
+            return kind, role, target
+
+        parsed = [parse(p) for p in phrases]
+        self.assertEqual({row[0] for row in parsed}, {"topicNecessarily"})
+        self.assertEqual({row[1] for row in parsed}, {"hasSpecificStructuralComponent"})
+        self.assertEqual({row[2] for row in parsed}, {"PulpOfThumb", "ThumbNail"})
+        for _, _, target in parsed:
+            self.assertIn(target, by_name)
 
     def test_anaemia_definition_is_grail_like(self):
         index = {}
