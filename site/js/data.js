@@ -465,7 +465,56 @@
     const search = parseSearch(searchBuf);
     const labels = JSON.parse(new TextDecoder().decode(labelBuf));
     const labelEntries = Object.entries(labels).map(([id, text]) => [id, String(text).toLowerCase()]);
+    attachTold(graph, null);
+    if (meta.files.told) {
+      try {
+        const toldBuf = await cachedBytes("data/" + meta.files.told, meta.built);
+        attachTold(graph, JSON.parse(new TextDecoder().decode(toldBuf)));
+      } catch (err) {
+        /* the graph still works without the told-edge marks */
+      }
+    }
     return { meta, graph, search, labels, labelEntries };
+  }
+
+  // Told OWL SubClassOf parents that the classified dump omitted. The extract
+  // restores them (see told.json.gz); the browser draws them in red and warns.
+  const TOLD_COLOR = "#d0262d";
+  function attachTold(graph, doc) {
+    const up = new Map();
+    const down = new Map();
+    const rows = [];
+    for (const row of (doc && doc.edges) || []) {
+      const [child, parent, file, line] = row;
+      const item = { child, parent, file: (doc.files || [])[file] || "", line };
+      rows.push(item);
+      if (!up.has(child)) up.set(child, []);
+      up.get(child).push(parent);
+      if (!down.has(parent)) down.set(parent, []);
+      down.get(parent).push(child);
+    }
+    graph.told = { up, down, rows, count: rows.length };
+  }
+
+  /* True when some member of child's group has a told parent in parent's group. */
+  function isToldLink(graph, child, parent) {
+    const told = graph.told;
+    if (!told || !told.count || child == null || parent == null) return false;
+    const parentGroup = equivMembers(graph, parent);
+    for (const m of equivMembers(graph, child)) {
+      const ups = told.up.get(m);
+      if (!ups) continue;
+      for (const p of ups) if (parentGroup.includes(p)) return true;
+    }
+    return false;
+  }
+
+  /* Told rows touching this concept's equivalence group, as child or parent. */
+  function toldRowsFor(graph, id) {
+    const told = graph.told;
+    if (!told || !told.count) return [];
+    const members = new Set(equivMembers(graph, id));
+    return told.rows.filter((row) => members.has(row.child) || members.has(row.parent));
   }
 
   const REL_COLORS = ["#6b3fa0", "#c45a5a", "#1d6a9a", "#a67c12", "#0e7a62", "#b5485d", "#3d7a4a", "#7a4b8c", "#c46b1a", "#3a4f8c", "#8a4b2f", "#5a6b2f", "#8a3d6b", "#2f5f73", "#6b5420", "#4a3d7a"];
@@ -513,7 +562,45 @@
     });
   }
 
+  const incShardCache = new Map();
+  /* Concepts whose definitions use id as a role filler: [{prop, source}]. */
+  async function loadIncoming(model, id) {
+    if (!model.meta.files.incoming) return [];
+    const props = await loadProps(model);
+    const sid = Math.floor(id / model.meta.shardSize);
+    const path = "data/i/" + String(sid).padStart(4, "0") + ".json.gz";
+    const key = model.meta.built + "|" + path;
+    if (!incShardCache.has(key)) {
+      let obj = null;
+      try {
+        const raw = await cachedBytes(path, model.meta.built);
+        obj = JSON.parse(new TextDecoder().decode(raw));
+      } catch (err) {
+        obj = {};
+      }
+      incShardCache.set(key, obj);
+    }
+    const rows = incShardCache.get(key)[String(id)] || [];
+    return rows.map(([propIndex, source]) => {
+      const prop = props.props[propIndex];
+      return {
+        prop: prop.n,
+        group: props.groups[prop.g],
+        groupIndex: prop.g,
+        source,
+        target: source,
+        dir: "in",
+        color: REL_COLORS[prop.g % REL_COLORS.length],
+      };
+    });
+  }
+
   OG.loadAll = loadAll;
+  OG.loadIncoming = loadIncoming;
+  OG.isToldLink = isToldLink;
+  OG.toldRowsFor = toldRowsFor;
+  OG.attachTold = attachTold;
+  OG.TOLD_COLOR = TOLD_COLOR;
   OG.loadRecord = loadRecord;
   OG.loadRels = loadRels;
   OG.searchConcepts = searchConcepts;

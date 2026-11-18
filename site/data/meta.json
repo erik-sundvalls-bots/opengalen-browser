@@ -1,7 +1,7 @@
 {
   "name": "OpenGALEN 8",
   "dump": "OpenGALEN8_WithPropertyChains_CRM+Diseases+SurgicalProcedures+DrugOntology.dump",
-  "built": "2026-11-16T14:48:00Z",
+  "built": "2026-11-18T11:03:58Z",
   "shardSize": 512,
   "modules": [
     "Unspecified",
@@ -42,14 +42,22 @@
     "uniqueDumpPairs": 244980,
     "classifierArtefactsRemoved": 2,
     "cyclesDropped": 5,
-    "uniqueParentLinks": 244995,
+    "uniqueParentLinks": 245076,
     "valueTypeParentsRestored": 22,
+    "toldParentsRestored": 103,
+    "toldParentConcepts": 102,
+    "toldParentsSkipped": 576,
+    "conceptsUnderToldLinks": 102,
+    "rootsInDump": 4816,
+    "incomingRows": 149129,
+    "conceptsWithIncoming": 11293,
+    "maxIncoming": 21679,
     "selfImplies": 436,
     "equivalentLines": 1664,
     "equivalentPairsInDump": 1664,
     "conceptsWithEquivalents": 8565,
     "generated": 90775,
-    "roots": 4794,
+    "roots": 4714,
     "definitions": 115552,
     "rubrics": 39690,
     "rubricLines": 97170,
@@ -74,15 +82,19 @@
     "labels": "labels.json.gz",
     "definitions": "d/{shard}.json.gz",
     "properties": "props.json.gz",
-    "relationships": "r/{shard}.json.gz"
+    "relationships": "r/{shard}.json.gz",
+    "incoming": "i/{shard}.json.gz",
+    "told": "told.json.gz"
   },
   "bytes": {
-    "graph": 2719741,
+    "graph": 2720245,
     "search": 3122406,
     "labels": 41921,
     "definitions": 3114691,
     "properties": 3247,
-    "relationships": 441220
+    "relationships": 441220,
+    "incoming": 436917,
+    "told": 8214
   },
   "checks": [
     {
@@ -167,7 +179,23 @@
     },
     {
       "ok": true,
-      "label": "told value-type parents restored: 22"
+      "label": "told value-type parents restored: 22 (expected 22)"
+    },
+    {
+      "ok": true,
+      "label": "no restored told parent was dropped by cycle breaking (0)"
+    },
+    {
+      "ok": true,
+      "label": "told OWL parents restored for dump-parentless concepts: 103"
+    },
+    {
+      "ok": true,
+      "label": "TopCategory is not hung under owl:Thing"
+    },
+    {
+      "ok": true,
+      "label": "restored told links reach 102 concepts (an Adenoma-scale leak would be ~10,000)"
     }
   ],
   "parseNotes": {

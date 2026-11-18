@@ -43,6 +43,12 @@ Search file ``search.bin.gz``:
     ...     tokenBytes    tokens     utf-8, concatenated
 
 Ids are the alphabetical order of concept names, starting at 0.
+
+JSON shards: ``d/NNNN`` definitions, ``r/NNNN`` outgoing role rows
+``[propIndex, filler]`` by source id, ``i/NNNN`` the same rows reversed
+``[propIndex, source]`` by filler id. ``told.json.gz`` lists the told OWL
+SubClassOf parents restored for dump-parentless concepts as
+``[child, parent, fileIndex, line]`` (drawn red; not from the classifier).
 """
 
 from __future__ import annotations
@@ -466,6 +472,7 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
     n_label_lines = 0
     spot_asserted = False
     told_subs: set[tuple[str, str]] = set()
+    told_src: dict[tuple[str, str], tuple[str, int]] = {}
     defs: dict[str, str] = {}
     equiv_names: dict[str, set[str]] = defaultdict(set)
     sanction: dict[str, str] = {}
@@ -487,7 +494,7 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
     for nth, name in enumerate(files, 1):
         mod = module_for(name)
         with owl_zip.open(name) as raw:
-            for line in io.TextIOWrapper(raw, encoding="utf-8", errors="replace", newline=""):
+            for lineno, line in enumerate(io.TextIOWrapper(raw, encoding="utf-8", errors="replace", newline=""), 1):
                 if line.startswith("Declaration(Class("):
                     n_decl_lines += 1
                     try:
@@ -527,7 +534,9 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
                     if isinstance(node, tuple) and node[0] == "SubClassOf" and len(node[1]) >= 2:
                         child, parent = node[1][0], node[1][1]
                         if isinstance(child, str) and isinstance(parent, str):
-                            told_subs.add((bag.setdefault(child, child), bag.setdefault(parent, parent)))
+                            pair = (bag.setdefault(child, child), bag.setdefault(parent, parent))
+                            told_subs.add(pair)
+                            told_src.setdefault(pair, (name.rsplit("/", 1)[-1], lineno))
                     continue
                 if line.startswith("EquivalentClasses("):
                     n_eq_axioms += 1
@@ -629,6 +638,7 @@ def load_owl(owl_zip: zipfile.ZipFile, bag: dict[str, str]):
         "prop_parents": prop_parents,
         "role_edges": role_edges,
         "told_subs": told_subs,
+        "told_src": told_src,
     }
 
 
@@ -877,29 +887,93 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
     for i in range(n):
         if parents[i]:
             parents[i] = sorted(set(parents[i]))
-    # The classified dump omits the GRAIL value-type / selector hierarchy.
-    # first, second, … and similar leaves are told OWL subclasses of a
-    # *ValueType parent (FoundationModel_TopClassesForMedicalDomain.owl
-    # line 1763: first ⊑ OrdinalPositionValueType) but have no implies line.
-    # Restore those told parents when the dump left the child with none.
-    valuetype_restored: list[tuple[str, str]] = []
+    # The classified dump gives some concepts no implies line at all, although
+    # the OWL release has a told named parent for them, e.g.
+    # first ⊑ OrdinalPositionValueType (FoundationModel_TopClassesForMedicalDomain.owl
+    # line 1763) or BrachialPlexus ⊑ NAMEDNervePlexus (MedicalExtensions_HumanAnatomy.owl
+    # line 4973). Restore every told named SubClassOf parent of a concept the
+    # dump left parentless. These links are marked "told, not from the
+    # classifier" (told.json.gz) and drawn in red by the browser.
+    # Skipped: a parent that is not a concept here, a link that would close a
+    # cycle, and a concept whose equivalent name already has that told parent
+    # (or a name equivalent to it) as a classified ancestor: the dump hangs the
+    # implies lines on one name of each equivalence group, and the browser
+    # merges the group into one node.
+    dump_parentless = {i for i in range(n) if not parents[i]}
+    eq_adj: dict[int, set[int]] = defaultdict(set)
+    for a, b in equiv_pairs:
+        if a in id_of and b in id_of:
+            eq_adj[id_of[a]].add(id_of[b])
+            eq_adj[id_of[b]].add(id_of[a])
+    for cname, others in owl["equiv_names"].items():
+        for other in others:
+            if cname in id_of and other in id_of:
+                eq_adj[id_of[cname]].add(id_of[other])
+                eq_adj[id_of[other]].add(id_of[cname])
+
+    def eq_group(i: int) -> set[int]:
+        seen = {i}
+        stack = [i]
+        while stack:
+            for j in eq_adj.get(stack.pop(), ()):
+                if j not in seen:
+                    seen.add(j)
+                    stack.append(j)
+        return seen
+
+    def reaches_id(start: int, target: int) -> bool:
+        if start == target:
+            return True
+        seen: set[int] = set()
+        stack = list(parents[start])
+        while stack:
+            node = stack.pop()
+            if node == target:
+                return True
+            if node in seen:
+                continue
+            seen.add(node)
+            stack.extend(parents[node])
+        return False
+
+    told_restored: list[tuple[str, str]] = []
+    told_skipped: list[tuple[str, str, str]] = []
     for child, parent in sorted(owl["told_subs"]):
-        if not parent.endswith("ValueType"):
+        if child not in id_of or child == parent:
             continue
-        if child not in id_of or parent not in id_of:
+        ci = id_of[child]
+        if ci not in dump_parentless:
             continue
-        ci, pi = id_of[child], id_of[parent]
-        if parents[ci] or ci == pi:
+        if parent not in id_of:
+            told_skipped.append((child, parent, "parent is not a concept in this build"))
             continue
-        parents[ci] = [pi]
-        valuetype_restored.append((child, parent))
-    if valuetype_restored:
-        print(
-            f"  restored {len(valuetype_restored)} told OWL value-type parents "
-            "omitted from the classified dump (e.g. first ⊑ OrdinalPositionValueType)",
-            flush=True,
-        )
+        if parent in {"owl:Thing", "Thing"}:
+            told_skipped.append((child, parent, "parent is owl:Thing, the OWL top, not a GALEN concept"))
+            continue
+        pi = id_of[parent]
+        others = eq_group(ci) - {ci}
+        targets = eq_group(pi)
+        if any(reaches_id(o, t) for o in others for t in targets):
+            told_skipped.append((child, parent, "already a classified ancestor of an equivalent name"))
+            continue
+        if reaches_id(pi, ci):
+            told_skipped.append((child, parent, "would close a cycle"))
+            continue
+        parents[ci] = sorted(set(parents[ci]) | {pi})
+        told_restored.append((child, parent))
+    valuetype_restored = [(c, p) for c, p in told_restored if p.endswith("ValueType")]
+    told_children = {c for c, _p in told_restored}
+    print(
+        f"  restored {len(told_restored)} told OWL parents on {len(told_children)} concepts "
+        f"the classified dump left parentless ({len(valuetype_restored)} *ValueType); "
+        f"skipped {len(told_skipped)}",
+        flush=True,
+    )
+    for row in told_skipped:
+        print("    skipped", *row, flush=True)
     removed = break_cycles(parents)
+    removed_set = set(removed)
+    told_cut = [(c, p) for c, p in told_restored if (id_of[c], id_of[p]) in removed_set]
     if removed:
         print(f"removed {len(removed)} cycle back-edges", flush=True)
     print("suspected narrower generated-class inversions kept (not fixed):", flush=True)
@@ -1072,6 +1146,48 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
         raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
         (rel_dir / f"{sid:04d}.json.gz").write_bytes(gzip_bytes(raw))
     rel_bytes = sum(p.stat().st_size for p in rel_dir.glob("*.json.gz"))
+    # Reverse index of the same definition-role rows: for each filler, the
+    # concepts whose definitions point at it. Sharded by filler id like r/.
+    inc_dir = out_dir / "i"
+    if inc_dir.exists():
+        for old in inc_dir.glob("*.json.gz"):
+            old.unlink()
+    inc_dir.mkdir(exist_ok=True)
+    inc_bufs: dict[int, dict] = defaultdict(dict)
+    n_inc = 0
+    for sid_payload in rel_bufs.values():
+        for src_key, rows in sid_payload.items():
+            src = int(src_key)
+            for prop_i, target in rows:
+                inc_bufs[target // SHARD].setdefault(str(target), []).append([prop_i, src])
+                n_inc += 1
+    for sid, payload in inc_bufs.items():
+        for rows in payload.values():
+            rows.sort(key=lambda row: (row[0], names[row[1]].lower()))
+        raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        (inc_dir / f"{sid:04d}.json.gz").write_bytes(gzip_bytes(raw))
+    inc_bytes = sum(p.stat().st_size for p in inc_dir.glob("*.json.gz"))
+    n_inc_targets = sum(len(payload) for payload in inc_bufs.values())
+    max_inc = max((len(rows) for payload in inc_bufs.values() for rows in payload.values()), default=0)
+    print(f"  incoming index {n_inc} rows on {n_inc_targets} fillers (max {max_inc}), {inc_bytes} bytes", flush=True)
+
+    # Told OWL parents restored above: child id, parent id, source file index, line.
+    told_files = sorted({owl["told_src"][pair][0] for pair in told_restored})
+    told_file_index = {name: i for i, name in enumerate(told_files)}
+    told_rows = []
+    for child, parent in told_restored:
+        fname, line_no = owl["told_src"][(child, parent)]
+        told_rows.append([id_of[child], id_of[parent], told_file_index[fname], line_no])
+    told_doc = {
+        "note": "Told OWL SubClassOf parents restored for concepts the classified dump left parentless. Not from the classifier.",
+        "files": told_files,
+        "edges": told_rows,
+        "skipped": [[c, p, why] for c, p, why in told_skipped],
+    }
+    (out_dir / "told.json.gz").write_bytes(
+        gzip_bytes(json.dumps(told_doc, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+    )
+    told_bytes = (out_dir / "told.json.gz").stat().st_size
     props_bytes = (out_dir / "props.json.gz").stat().st_size
     print(f"  relationship edges {n_rel} on {n_rel_concepts} concepts, {len(group_list)} groups, {props_bytes+rel_bytes} bytes", flush=True)
 
@@ -1183,7 +1299,23 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
             "first has told OWL parent OrdinalPositionValueType (omitted from the dump)",
         )
         check(reaches("first", "SymbolicValueType"), "first reaches SymbolicValueType via the restored value-type chain")
-    check(len(valuetype_restored) >= 16, f"told value-type parents restored: {len(valuetype_restored)}")
+    check(len(valuetype_restored) == 22, f"told value-type parents restored: {len(valuetype_restored)} (expected 22)")
+    check(not told_cut, f"no restored told parent was dropped by cycle breaking ({len(told_cut)})")
+    check(len(told_restored) >= 100, f"told OWL parents restored for dump-parentless concepts: {len(told_restored)}")
+    check(
+        ("TopCategory", "owl:Thing") not in told_restored and ("TopCategory", "Thing") not in told_restored,
+        "TopCategory is not hung under owl:Thing",
+    )
+    told_desc: set[int] = set()
+    stack = [id_of[c] for c in told_children]
+    while stack:
+        node = stack.pop()
+        if node in told_desc:
+            continue
+        told_desc.add(node)
+        stack.extend(children[node])
+    print(f"  concepts under a restored told link (incl. the restored ones): {len(told_desc)}", flush=True)
+    check(len(told_desc) < 2000, f"restored told links reach {len(told_desc)} concepts (an Adenoma-scale leak would be ~10,000)")
 
     meta = {
         "name": "OpenGALEN 8",
@@ -1210,6 +1342,14 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
             "cyclesDropped": len(removed),
             "uniqueParentLinks": sum(len(p) for p in parents),
             "valueTypeParentsRestored": len(valuetype_restored),
+            "toldParentsRestored": len(told_restored),
+            "toldParentConcepts": len(told_children),
+            "toldParentsSkipped": len(told_skipped),
+            "conceptsUnderToldLinks": len(told_desc),
+            "rootsInDump": len(dump_parentless),
+            "incomingRows": n_inc,
+            "conceptsWithIncoming": n_inc_targets,
+            "maxIncoming": max_inc,
             "selfImplies": self_implies,
             "equivalentLines": n_equiv_lines,
             "equivalentPairsInDump": len(equiv_pairs),
@@ -1241,6 +1381,8 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
             "definitions": "d/{shard}.json.gz",
             "properties": "props.json.gz",
             "relationships": "r/{shard}.json.gz",
+            "incoming": "i/{shard}.json.gz",
+            "told": "told.json.gz",
         },
         "bytes": {
             "graph": sz(graph_path),
@@ -1249,6 +1391,8 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
             "definitions": shard_bytes,
             "properties": props_bytes,
             "relationships": rel_bytes,
+            "incoming": inc_bytes,
+            "told": told_bytes,
         },
         "checks": [{"ok": ok, "label": label} for ok, label in checks],
         "parseNotes": {
@@ -1334,8 +1478,34 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
         "`SubClassOf(first OrdinalPositionValueType)` in "
         "`OpenGALEN8_FoundationModel_TopClassesForMedicalDomain.owl` line 1763, and "
         "`SubClassOf(OrdinalPositionValueType SymbolicValueType)` in "
-        "`OpenGALEN8_GenericModel.owl` line 156. Those told parents are restored when "
-        f"the dump left the child with none ({len(valuetype_restored)} links):",
+        "`OpenGALEN8_GenericModel.owl` line 156. "
+        f"The same gap affects other concepts: {len(dump_parentless):,} concepts have no parent in the dump "
+        f"(after the two artefacts are removed), and {len(told_children | {c for c, _p, _w in told_skipped}):,} of them have a told named OWL "
+        f"`SubClassOf` parent. For {len({c for c, _p, w in told_skipped if 'equivalent' in w}):,} of those the told parent is already a classified "
+        "ancestor of an equivalent name (the dump hangs the implies lines on one name of each equivalence group, "
+        "and the browser merges the group). "
+        f"{len(told_restored):,} told parents on {len(told_children):,} concepts are restored "
+        f"({len(valuetype_restored)} of them `*ValueType` parents, as before). "
+        "Each restored link is listed in `site/data/told.json.gz` with its OWL file and line, "
+        "and the browser draws it in red as told, not from the classifier. "
+        f"Roots: {len(dump_parentless):,} in the dump, {len(roots):,} after restoring. "
+        f"{len(told_desc):,} concepts sit at or under a restored told link.",
+        "",
+        f"Skipped told parents ({len(told_skipped)}):",
+        "",
+    ]
+    for child, parent, why in told_skipped:
+        lines.append(f"- `{child}` ⊑ `{parent}`: {why}")
+    lines += [
+        "",
+        "Restored told parents by parent (top 20):",
+        "",
+    ]
+    for parent, count in Counter(p for _c, p in told_restored).most_common(20):
+        lines.append(f"- `{parent}`: {count}")
+    lines += [
+        "",
+        f"Restored `*ValueType` parents ({len(valuetype_restored)} links):",
         "",
     ]
     for child, parent in valuetype_restored:

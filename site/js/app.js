@@ -37,7 +37,7 @@
   const suggest = document.getElementById("suggest");
   const panel = document.getElementById("panel-body");
   const tip = document.getElementById("tip");
-  const state = { showGen: true, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, marking: true, expanded: new Set(), childExtra: 0, focus: 0, rels: new Set(), relEdges: [], relOn: false, relReady: false, quals: new Set(), qualEdges: [], qualOn: false, qualReady: false };
+  const state = { showGen: true, siblings: false, children: true, ancestorsOnly: false, labels: true, clustering: true, marking: true, expanded: new Set(), childExtra: 0, focus: 0, rels: new Set(), relEdges: [], relOn: false, relReady: false, quals: new Set(), qualEdges: [], qualOn: false, qualReady: false, incs: new Set(), incEdges: [], incReady: false };
   let model = null;
   let activeSuggest = -1;
   let panelToken = 0;
@@ -48,7 +48,14 @@
   const tipBody = document.getElementById("tip-body");
   let focusRels = [];
   let focusQuals = [];
+  let focusIncs = [];
   let relToken = 0;
+  let incToken = 0;
+  // Rows rendered in the incoming list at once. Some fillers are used by
+  // thousands of definitions; the filter box narrows the list.
+  const INC_LIST_MAX = 300;
+  const TOLD_ISSUE = "https://github.com/erik-sundvalls-bots/opengalen-browser/issues/10";
+  const toldBanner = document.getElementById("told-banner");
 
   function setStatus(text) { status.textContent = text || ""; }
 
@@ -95,19 +102,56 @@
       state.qualOn = false;
       state.relReady = false;
       state.qualReady = false;
+      state.incs = new Set();
+      state.incReady = false;
       focusRels = [];
       focusQuals = [];
+      focusIncs = [];
     }
     hideTip();
     hideInfo();
     state.focus = id;
     state.relEdges = [];
     state.qualEdges = [];
+    state.incEdges = [];
     if (!state.qualReady) focusQuals = [];
     document.title = OG.groupHeading(model.graph, id) + " · OpenGALEN 8";
     draw();
     fillPanel(id);
     loadFocusRels(id);
+    loadFocusIncoming(id);
+  }
+
+  async function loadFocusIncoming(id) {
+    const token = ++incToken;
+    const g = model.graph;
+    const members = OG.equivMembers(g, id);
+    const group = new Set(members);
+    const rows = [];
+    const seen = new Set();
+    for (const mid of members) {
+      let part = [];
+      try { part = await OG.loadIncoming(model, mid); } catch (err) { part = []; }
+      for (const edge of part) {
+        if (group.has(edge.source)) continue;
+        const key = edge.prop + ":" + g.canon[edge.source];
+        if (seen.has(key)) continue;
+        seen.add(key);
+        rows.push(edge);
+      }
+    }
+    if (token !== incToken || state.focus !== id) return;
+    const nameOf = (edge) => g.names[g.canon[edge.source]].toLowerCase();
+    rows.sort((a, b) => (a.groupIndex - b.groupIndex) || (a.prop < b.prop ? -1 : a.prop > b.prop ? 1 : 0) || (nameOf(a) < nameOf(b) ? -1 : nameOf(a) > nameOf(b) ? 1 : 0));
+    focusIncs = rows;
+    if (!state.incReady) {
+      // Incoming lists can be large, so nothing is ticked to start with.
+      state.incs = new Set();
+      state.incReady = true;
+    }
+    state.incEdges = focusIncs.filter((edge) => state.incs.has(OG.edgeKey(edge)));
+    paintIncSection();
+    if (state.incEdges.length) draw();
   }
 
   async function loadFocusRels(id) {
@@ -151,10 +195,38 @@
         + (state.ancestorsOnly ? " · ancestors only" : state.children === false ? " · children hidden" : hiddenKids ? " · " + hiddenKids + " generated children hidden" : "")
         + (state.relOn && state.relEdges.length ? " · " + state.relEdges.length + " relationship" + (state.relEdges.length === 1 ? "" : "s") : "")
         + (state.qualOn && state.qualEdges.length ? " · " + state.qualEdges.length + " sanction" + (state.qualEdges.length === 1 ? "" : "s") : "")
+        + (state.incEdges.length ? " · " + state.incEdges.length + " incoming" : "")
       );
+      syncToldBanner(lastView);
     } catch (err) {
       setStatus("Could not lay out this neighbourhood. " + err.message);
     }
+  }
+
+  /* Warn when the open concept, or the drawn graph, has a told OWL parent
+     link that the classified dump omitted. Those links are drawn in red. */
+  function syncToldBanner(view) {
+    if (!toldBanner || !model) return;
+    const rows = OG.toldRowsFor ? OG.toldRowsFor(model.graph, state.focus) : [];
+    const drawn = view && view.toldLinks ? view.toldLinks : 0;
+    if (!rows.length && !drawn) {
+      toldBanner.hidden = true;
+      return;
+    }
+    toldBanner.hidden = false;
+    toldBanner.replaceChildren();
+    const icon = document.createElement("b");
+    icon.textContent = "⚠ ";
+    icon.setAttribute("aria-hidden", "true");
+    const text = document.createElement("span");
+    text.append("Some links here come from the original OWL told axioms, not from the classified dump (shown in red). The published classification omitted them; see ");
+    const a = document.createElement("a");
+    a.href = TOLD_ISSUE;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = "issue #10";
+    text.append(a, ".");
+    toldBanner.append(icon, text);
   }
 
   function bindGraph(view) {
@@ -209,7 +281,9 @@
         if (event.pointerType && event.pointerType !== "mouse") return;
         tip.classList.remove("is-touch");
         const target = model.graph.names[rel.targetId];
-        tipBody.innerHTML = "<b>" + escapeHtml(edgeLabel(rel)) + "</b> → " + escapeHtml(OG.spaced(target));
+        tipBody.innerHTML = rel.kind === "inc"
+          ? escapeHtml(OG.spaced(model.graph.names[rel.sourceId])) + " <b>" + escapeHtml(edgeLabel(rel)) + "</b> → " + escapeHtml(OG.spaced(target))
+          : "<b>" + escapeHtml(edgeLabel(rel)) + "</b> → " + escapeHtml(OG.spaced(target));
         tip.hidden = false;
         moveTip(event);
       })
@@ -228,7 +302,7 @@
           return;
         }
         hideTip();
-        go(model.graph.names[rel.targetId]);
+        go(model.graph.names[rel.kind === "inc" ? rel.sourceId : rel.targetId]);
       });
   }
 
@@ -291,7 +365,7 @@
       children.push(name);
       labelKeys.add(key);
     }
-    for (const rel of [...(view.relLinks || []), ...(view.qualLinks || [])]) {
+    for (const rel of [...(view.relLinks || []), ...(view.qualLinks || []), ...(view.incLinks || [])]) {
       if (rel.source !== d.key) continue;
       const name = drawnName(view, rel.target);
       if (!name) continue;
@@ -482,15 +556,22 @@
     return "shown " + selected + " of " + total;
   }
 
+  function pickEdges(kind) {
+    return kind === "rel" ? focusRels : kind === "qual" ? focusQuals : focusIncs;
+  }
+  function pickSelected(kind) {
+    return kind === "rel" ? state.rels : kind === "qual" ? state.quals : state.incs;
+  }
+
   function updatePickCount(kind) {
-    const edges = kind === "rel" ? focusRels : focusQuals;
-    const selected = kind === "rel" ? state.rels : state.quals;
+    const edges = pickEdges(kind);
+    const selected = pickSelected(kind);
     const el = document.getElementById(kind + "-count");
     if (el) el.textContent = shownCountText(selected.size, edges.length);
   }
 
   function syncPickChecks(kind) {
-    const selected = kind === "rel" ? state.rels : state.quals;
+    const selected = pickSelected(kind);
     const list = document.getElementById(kind + "-list");
     if (!list) return;
     list.querySelectorAll("input[type=checkbox]").forEach((box) => {
@@ -517,7 +598,16 @@
     count.id = kind + "-count";
     count.className = "rel-count";
     all.addEventListener("click", () => {
-      const edges = kind === "rel" ? focusRels : focusQuals;
+      if (kind === "inc") {
+        // All ticks the rows currently listed (filtered, at most INC_LIST_MAX).
+        const list = document.getElementById("inc-list");
+        const keys = new Set(state.incs);
+        if (list) list.querySelectorAll("input[type=checkbox]").forEach((box) => keys.add(box.dataset.key));
+        state.incs = keys;
+        applyIncSelection();
+        return;
+      }
+      const edges = pickEdges(kind);
       const keys = new Set(edges.map((edge) => OG.edgeKey(edge)));
       if (kind === "rel") { state.rels = keys; state.relOn = keys.size > 0; }
       else { state.quals = keys; state.qualOn = keys.size > 0; }
@@ -525,7 +615,8 @@
       else applyQualSelection();
     });
     none.addEventListener("click", () => {
-      if (kind === "rel") { state.rels = new Set(); state.relOn = false; applyRelSelection(); }
+      if (kind === "inc") { state.incs = new Set(); applyIncSelection(); }
+      else if (kind === "rel") { state.rels = new Set(); state.relOn = false; applyRelSelection(); }
       else { state.quals = new Set(); state.qualOn = false; applyQualSelection(); }
     });
     actions.append(all, none, count);
@@ -539,10 +630,20 @@
     const box = document.createElement("input");
     box.type = "checkbox";
     box.dataset.key = key;
-    box.checked = (kind === "rel" ? state.rels : state.quals).has(key);
+    box.checked = pickSelected(kind).has(key);
     const text = document.createElement("span");
     text.className = "edge-pick-text";
-    if (kind === "qual" && edge.phrase) {
+    if (kind === "inc") {
+      const sourceName = g ? OG.neighbourLabel(g, edge.source) : "";
+      text.append(OG.spaced(sourceName) + " ");
+      const prop = document.createElement("span");
+      prop.className = "rel-word";
+      prop.style.color = edge.color || "";
+      prop.style.fontWeight = "700";
+      prop.textContent = edge.prop || "";
+      text.append(prop, " this");
+      text.title = (g ? g.names[edge.source] : "") + " " + (edge.prop || "") + " " + (g ? g.names[state.focus] : "");
+    } else if (kind === "qual" && edge.phrase) {
       text.classList.add("qual-line");
       text.dataset.phrase = edge.phrase;
       paintPhrase(text, edge.phrase);
@@ -556,22 +657,23 @@
       const targetName = edge.targetName || (g && g.names[edge.target]) || "";
       if (targetName) text.append(" " + OG.spaced(targetName));
     }
-    const id = (kind === "rel" ? "rel-pick-" : "qual-pick-") + key.replace(/[^A-Za-z0-9_-]+/g, "_");
+    const id = kind + "-pick-" + key.replace(/[^A-Za-z0-9_-]+/g, "_");
     box.id = id;
     label.setAttribute("for", id);
     // Keep the input inside the label as well, and still set for/id so
     // the control is a real labelled checkbox for keyboard users.
     box.addEventListener("change", () => {
-      const selected = kind === "rel" ? state.rels : state.quals;
+      const selected = pickSelected(kind);
       if (box.checked) {
         selected.add(key);
         if (kind === "rel") state.relOn = true;
-        else state.qualOn = true;
+        else if (kind === "qual") state.qualOn = true;
       } else {
         selected.delete(key);
       }
       if (kind === "rel") applyRelSelection();
-      else applyQualSelection();
+      else if (kind === "qual") applyQualSelection();
+      else applyIncSelection();
     });
     label.append(box, text);
     return label;
@@ -628,6 +730,68 @@
     syncPickChecks("rel");
     syncActions();
     if (model) draw();
+  }
+
+  function applyIncSelection() {
+    state.incEdges = focusIncs.filter((edge) => state.incs.has(OG.edgeKey(edge)));
+    syncPickChecks("inc");
+    if (model) draw();
+  }
+
+  function paintIncSection() {
+    const box = document.getElementById("inc-box");
+    if (!box) return;
+    box.replaceChildren();
+    if (!focusIncs.length) {
+      box.textContent = "No definition uses this concept as a role filler.";
+      box.className = "muted";
+      return;
+    }
+    box.className = "";
+    box.append(makeAllNone("inc"));
+    const g = model.graph;
+    const filter = document.createElement("input");
+    filter.id = "inc-filter";
+    filter.type = "search";
+    filter.placeholder = "Filter " + focusIncs.length + " incoming";
+    filter.setAttribute("aria-label", "Filter incoming relationships");
+    const list = document.createElement("div");
+    list.id = "inc-list";
+    list.className = "edge-list";
+    list.setAttribute("role", "group");
+    list.setAttribute("aria-label", "Incoming relationships to draw");
+    const more = document.createElement("p");
+    more.className = "muted note-line";
+    const paint = () => {
+      const needle = filter.value.trim().toLowerCase();
+      list.replaceChildren();
+      let shown = 0;
+      let matched = 0;
+      let lastGroup = null;
+      for (const edge of focusIncs) {
+        if (needle) {
+          const hay = (edge.prop + " " + g.names[edge.source] + " " + OG.spaced(OG.neighbourLabel(g, edge.source))).toLowerCase();
+          if (!hay.includes(needle)) continue;
+        }
+        matched++;
+        if (shown >= INC_LIST_MAX) continue;
+        if (edge.group !== lastGroup) {
+          const heading = document.createElement("div");
+          heading.className = "rel-group";
+          heading.textContent = edge.group;
+          list.append(heading);
+          lastGroup = edge.group;
+        }
+        list.append(makePickRow("inc", edge, g));
+        shown++;
+      }
+      more.textContent = matched > shown ? "Listing " + shown + " of " + matched + ". Type in the filter to narrow the list." : "";
+      more.hidden = !more.textContent;
+    };
+    filter.addEventListener("input", paint);
+    box.append(filter, list, more);
+    paint();
+    updatePickCount("inc");
   }
 
   function applyQualSelection() {
@@ -748,6 +912,11 @@
     relSlot.el.id = "rel-section";
     relSlot.body.id = "rel-box";
     relSlot.body.textContent = "Loading definition relationships…";
+    const incSlot = section("Incoming relationships", "Concepts whose OWL definitions use this concept as a role filler, shown as the source concept and the role, for example Thumb hasOrdinalPosition first. Nothing is ticked to start with, because some concepts are used by thousands of definitions. Tick a row to add that concept and a dashed arrow pointing at this concept to the graph. The filter narrows the list; at most " + INC_LIST_MAX + " rows are listed at once, and All ticks the rows that are listed. The count is how many are ticked. A new concept resets the list.");
+    incSlot.el.id = "inc-section";
+    incSlot.body.id = "inc-box";
+    incSlot.body.textContent = "Loading incoming relationships…";
+    if (focusIncs.length && state.focus === id) paintIncSection();
     const defSlot = section("Definition");
     defSlot.body.id = "def-text";
     defSlot.body.textContent = "Loading the definition…";
@@ -761,7 +930,7 @@
     const parentSlot = section("Parents");
     const shownParents = parents.filter((pid) => state.showGen || !g.gen[pid]);
     const hiddenParents = parents.length - shownParents.length;
-    fillLinks(parentSlot.body, shownParents);
+    fillLinks(parentSlot.body, shownParents, (pid) => OG.isToldLink(g, id, pid));
     if (hiddenParents) note(parentSlot.body, hiddenParents + (hiddenParents === 1 ? " generated parent hidden" : " generated parents hidden"), "Turn on “Show generated classes” to list them.");
 
     const allKids = hier.childrenOf(id);
@@ -782,7 +951,7 @@
         const hay = (OG.groupHeading(g, cid) + " " + OG.spaced(OG.groupHeading(g, cid))).toLowerCase();
         return hay.includes(needle);
       }).slice(0, 80);
-      fillLinks(childList, matched);
+      fillLinks(childList, matched, (cid) => OG.isToldLink(g, cid, id));
       if (kids.length > matched.length) note(childList, "Showing " + matched.length + " of " + kids.length + ".");
     };
     filter.addEventListener("input", paintKids);
@@ -914,7 +1083,7 @@
     return { el, body };
   }
 
-  function fillLinks(container, ids) {
+  function fillLinks(container, ids, isTold) {
     container.innerHTML = "";
     if (!ids.length) {
       const p = document.createElement("p");
@@ -936,6 +1105,13 @@
       a.title = OG.groupHeading(model.graph, id);
       if (model.graph.gen[id]) a.className = "gen";
       li.append(a);
+      if (isTold && isTold(id)) {
+        const mark = document.createElement("span");
+        mark.className = "told-mark";
+        mark.textContent = "told";
+        mark.title = "Told OWL SubClassOf link, not from the classified dump";
+        li.append(" ", mark);
+      }
       list.append(li);
     }
   }
