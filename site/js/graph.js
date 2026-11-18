@@ -133,7 +133,17 @@
       seenQual.add(key);
       qualEdges.push({ ...edge, target });
     }
-    const seeds = [focus, ...relEdges.map((edge) => edge.target), ...qualEdges.map((edge) => edge.target)];
+    const seenInc = new Set();
+    const incEdges = [];
+    for (const edge of state.incEdges || []) {
+      const source = hier.rep(edge.source);
+      if (source === focus) continue;
+      const key = edge.prop + ":" + source;
+      if (seenInc.has(key)) continue;
+      seenInc.add(key);
+      incEdges.push({ ...edge, source });
+    }
+    const seeds = [focus, ...relEdges.map((edge) => edge.target), ...qualEdges.map((edge) => edge.target), ...incEdges.map((edge) => edge.source)];
     const anc = ancestorSet(hier.parentsOf, seeds);
     const seedSet = new Set(seeds);
     const hidden = new Set();
@@ -210,32 +220,40 @@
 
     const links = [];
     const seenLink = new Set();
-    function link(from, to, kind) {
+    // told: the child-parent pair is a told OWL parent the classified dump omitted.
+    function link(from, to, kind, told) {
       if (!from || !to || from === to || !nodes.has(from) || !nodes.has(to)) return;
       const key = from + ">" + to;
-      if (seenLink.has(key)) return;
+      if (seenLink.has(key)) {
+        if (told) {
+          const existing = links.find((item) => item.source === from && item.target === to);
+          if (existing) existing.told = true;
+        }
+        return;
+      }
       seenLink.add(key);
-      links.push({ source: from, target: to, kind });
+      links.push({ source: from, target: to, kind, told: !!told });
     }
+    const toldLink = (child, parent) => (OG.isToldLink ? OG.isToldLink(graph, child, parent) : false);
     for (const node of nodes.values()) {
       if (node.kind !== "concept") continue;
       const id = node.concept;
       if (node.role === "child") {
-        link("n" + focus, node.key, "child");
+        link("n" + focus, node.key, "child", toldLink(id, focus));
         continue;
       }
       if (node.role === "sib") {
         const parent = parentOf(focus).find((item) => hier.childrenOf(item).includes(id));
-        link(parent != null ? rep(parent) : "n" + focus, node.key, "sib");
+        link(parent != null ? rep(parent) : "n" + focus, node.key, "sib", parent != null && toldLink(id, parent));
         continue;
       }
-      for (const parent of parentOf(id)) link(rep(parent), node.key, "anc");
+      for (const parent of parentOf(id)) link(rep(parent), node.key, "anc", toldLink(id, parent));
     }
     for (const node of nodes.values()) {
       if (node.kind !== "cluster") continue;
       for (const id of node.members) {
-        for (const parent of parentOf(id)) link(rep(parent), node.key, "anc");
-        for (const child of kids.get(id) || []) link(node.key, rep(child), "anc");
+        for (const parent of parentOf(id)) link(rep(parent), node.key, "anc", toldLink(id, parent));
+        for (const child of kids.get(id) || []) link(node.key, rep(child), "anc", toldLink(child, id));
       }
     }
     if (more) link("n" + focus, "more", "child");
@@ -263,12 +281,22 @@
       });
     }
 
+    const incLinks = [];
+    for (const edge of incEdges) {
+      const from = rep(edge.source);
+      const to = rep(focus);
+      if (!nodes.has(from) || !nodes.has(to) || from === to) continue;
+      incLinks.push({ source: from, target: to, kind: "inc", prop: edge.prop, color: edge.color, group: edge.group, targetId: focus, sourceId: edge.source });
+    }
+
     return {
       nodes: [...nodes.values()],
       links,
       clusters,
       relLinks,
       qualLinks,
+      incLinks,
+      toldLinks: links.filter((item) => item.told).length,
       childHidden,
       ancestorCount: anc.size,
       visibleCount: vis.size,
@@ -457,14 +485,15 @@
     for (const link of dag.links()) {
       const pts = link.points.map((p) => (Array.isArray(p) ? p : [p.x, p.y]));
       const kind = view.links.find((item) => item.source === link.source.data.key && item.target === link.target.data.key);
-      const color = kind && kind.kind === "child" ? "#c46b1a" : kind && kind.kind === "sib" ? "#8a8175" : "#0f6e6b";
+      const told = !!(kind && kind.told);
+      const color = told ? (OG.TOLD_COLOR || "#d0262d") : kind && kind.kind === "child" ? "#c46b1a" : kind && kind.kind === "sib" ? "#8a8175" : "#0f6e6b";
       drawn.push({ pts, color, source: link.source.data, target: link.target.data });
       linkG.append("path")
-        .attr("class", "lk dimmable")
+        .attr("class", told ? "lk dimmable told-link" : "lk dimmable")
         .attr("d", linkGen(pts))
         .attr("stroke", color)
-        .attr("stroke-opacity", .55)
-        .attr("stroke-width", 1.3)
+        .attr("stroke-opacity", told ? .95 : .55)
+        .attr("stroke-width", told ? 2.4 : 1.3)
         .attr("stroke-linecap", "round")
         .datum({ source: link.source.data, target: link.target.data });
     }
@@ -538,7 +567,7 @@
     }
     const byKeyDrawn = new Map();
     for (const node of dag) byKeyDrawn.set(node.data.key, node.data);
-    for (const rel of view.relLinks || []) {
+    for (const rel of [...(view.relLinks || []), ...(view.incLinks || [])]) {
       const a = pos.get(rel.source);
       const b = pos.get(rel.target);
       if (!a || !b) continue;
@@ -551,7 +580,7 @@
       const endPad = tgt ? glyphPad(nodeGlyph(tgt, graph), b, mid) : 6;
       const trimmed = trimQuadratic(a, mid, b, startPad, endPad);
       const group = relG.append("g")
-        .attr("class", "rel-edge")
+        .attr("class", rel.kind === "inc" ? "rel-edge inc-edge" : "rel-edge")
         .datum(rel);
       group.append("path")
         .attr("class", "rel-edge-line")

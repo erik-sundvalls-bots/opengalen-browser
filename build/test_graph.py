@@ -376,6 +376,86 @@ class GraphTests(unittest.TestCase):
 
         self.assertTrue(reaches("first", "SymbolicValueType"))
 
+    def _index(self, wanted):
+        index = {}
+        for i in range(self.g["n"]):
+            name = self.g["name"](i)
+            if name in wanted:
+                index[name] = i
+                if len(index) == len(wanted):
+                    break
+        return index
+
+    def _told(self):
+        return json.loads(gzip.decompress((DATA / "told.json.gz").read_bytes()))
+
+    def test_told_parents_are_restored_and_marked(self):
+        # Told OWL SubClassOf parents of concepts the classified dump left
+        # parentless are restored and listed in told.json.gz (drawn red).
+        told = self._told()
+        counts = self.meta["counts"]
+        self.assertEqual(len(told["edges"]), counts["toldParentsRestored"])
+        self.assertEqual(len({row[0] for row in told["edges"]}), counts["toldParentConcepts"])
+        self.assertGreaterEqual(counts["toldParentsRestored"], 100)
+        offs, ids = self.g["par_off"], self.g["par_ids"]
+        for child, parent, file_index, line in told["edges"]:
+            self.assertIn(parent, list(ids[offs[child] : offs[child + 1]]))
+            self.assertTrue(told["files"][file_index].endswith(".owl"))
+            self.assertGreater(line, 0)
+        index = self._index({"first", "OrdinalPositionValueType", "moreThanOne", "oneOrMore", "TopCategory", "BrachialPlexus"})
+        pairs = {(row[0], row[1]): (told["files"][row[2]], row[3]) for row in told["edges"]}
+        self.assertEqual(
+            pairs[(index["first"], index["OrdinalPositionValueType"])],
+            ("OpenGALEN8_FoundationModel_TopClassesForMedicalDomain.owl", 1763),
+        )
+        self.assertEqual(
+            pairs[(index["moreThanOne"], index["oneOrMore"])],
+            ("OpenGALEN8_GenericModel_TopOntologyOfClasses.owl", 1091),
+        )
+        # TopCategory stays a root (its only told parent is owl:Thing), and
+        # BrachialPlexus is not restored: its equivalent PlexusBrachialis
+        # already has NAMEDNervePlexus as a classified parent.
+        self.assertEqual(list(ids[offs[index["TopCategory"]] : offs[index["TopCategory"] + 1]]), [])
+        self.assertNotIn(index["BrachialPlexus"], {row[0] for row in told["edges"]})
+        reasons = {row[2] for row in told["skipped"]}
+        self.assertIn("already a classified ancestor of an equivalent name", reasons)
+
+    def test_told_restoration_root_count(self):
+        counts = self.meta["counts"]
+        self.assertEqual(counts["roots"], counts["rootsInDump"] - counts["toldParentConcepts"])
+        self.assertEqual(counts["cyclesDropped"], 5)
+        # No Adenoma-style leak: the restored links reach only the restored concepts.
+        self.assertLess(counts["conceptsUnderToldLinks"], 2000)
+
+    def test_incoming_index_is_reverse_of_relationships(self):
+        size = self.meta["shardSize"]
+        forward = set()
+        for path in sorted((DATA / "r").glob("*.json.gz")):
+            for src, rows in json.loads(gzip.decompress(path.read_bytes())).items():
+                for prop, target in rows:
+                    forward.add((int(src), prop, target))
+        reverse = set()
+        for path in sorted((DATA / "i").glob("*.json.gz")):
+            sid = int(path.name.split(".")[0])
+            for target, rows in json.loads(gzip.decompress(path.read_bytes())).items():
+                self.assertEqual(int(target) // size, sid)
+                for prop, src in rows:
+                    reverse.add((src, prop, int(target)))
+        self.assertEqual(forward, reverse)
+        self.assertEqual(len(reverse), self.meta["counts"]["incomingRows"])
+
+    def test_first_incoming_includes_thumb_and_hallux(self):
+        index = self._index({"first", "Pollux", "Thumb", "Hallux"})
+        props = json.loads(gzip.decompress((DATA / "props.json.gz").read_bytes()))["props"]
+        shard = index["first"] // self.meta["shardSize"]
+        rows = json.loads(gzip.decompress((DATA / "i" / f"{shard:04d}.json.gz").read_bytes()))[str(index["first"])]
+        pairs = {(props[p]["n"], src) for p, src in rows}
+        self.assertGreaterEqual(len({src for _p, src in pairs if _p == "hasOrdinalPosition"}), 11)
+        self.assertIn(("hasOrdinalPosition", index["Hallux"]), pairs)
+        self.assertTrue(
+            ("hasOrdinalPosition", index["Pollux"]) in pairs or ("hasOrdinalPosition", index["Thumb"]) in pairs
+        )
+
     def test_pollux_qualifiers_parse_to_graph_targets(self):
         # Sanction/qualifier phrases already stored for the panel must parse
         # into role + filler edges the sanctions toggle can draw.
