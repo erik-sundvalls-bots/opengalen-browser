@@ -196,8 +196,10 @@
         + (state.relOn && state.relEdges.length ? " · " + state.relEdges.length + " relationship" + (state.relEdges.length === 1 ? "" : "s") : "")
         + (state.qualOn && state.qualEdges.length ? " · " + state.qualEdges.length + " sanction" + (state.qualEdges.length === 1 ? "" : "s") : "")
         + (state.incEdges.length ? " · " + state.incEdges.length + " incoming" : "")
+        + (g.variant === "told" ? " · told hierarchy" : "")
       );
       syncToldBanner(lastView);
+      syncVariantLegend(lastView);
     } catch (err) {
       setStatus("Could not lay out this neighbourhood. " + err.message);
     }
@@ -219,7 +221,11 @@
     icon.textContent = "⚠ ";
     icon.setAttribute("aria-hidden", "true");
     const text = document.createElement("span");
-    text.append("Some links here come from the original OWL told axioms, not from the classified dump (shown in red). The published classification omitted them; see ");
+    if (model.graph.variant === "told") {
+      text.append("Red links are told parents that the classified dump does not have above the concept at all; see ");
+    } else {
+      text.append("Some links here come from the original OWL told axioms, not from the classified dump (shown in red). The published classification omitted them; see ");
+    }
     const a = document.createElement("a");
     a.href = TOLD_ISSUE;
     a.target = "_blank";
@@ -228,6 +234,91 @@
     text.append(a, ".");
     toldBanner.append(icon, text);
   }
+
+  /* Hierarchy variant: the classified dump (default) or the told OWL
+     axioms. The told data is fetched on the first click only. */
+  const hierButtons = {
+    inferred: document.getElementById("hier-inferred"),
+    told: document.getElementById("hier-told"),
+  };
+  const variantLegend = document.getElementById("variant-legend");
+
+  function legendLine(color, dash, width, text) {
+    const row = document.createElement("span");
+    row.className = "lg";
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("width", "34");
+    svg.setAttribute("height", "10");
+    svg.setAttribute("aria-hidden", "true");
+    const line = document.createElementNS(svgNS, "line");
+    line.setAttribute("x1", "2");
+    line.setAttribute("x2", "32");
+    line.setAttribute("y1", "5");
+    line.setAttribute("y2", "5");
+    line.setAttribute("stroke", color);
+    line.setAttribute("stroke-width", String(width));
+    line.setAttribute("stroke-linecap", "round");
+    if (dash) line.setAttribute("stroke-dasharray", dash);
+    svg.append(line);
+    row.append(svg, document.createTextNode(text));
+    return row;
+  }
+
+  function syncVariantLegend(view) {
+    if (!variantLegend || !model) return;
+    const told = model.graph.variant === "told";
+    variantLegend.hidden = !told;
+    if (!told) return;
+    variantLegend.replaceChildren();
+    const head = document.createElement("b");
+    head.textContent = "Told hierarchy (before classification)";
+    variantLegend.append(
+      head,
+      legendLine("#0f6e6b", null, 1.6, "told, also a direct classified link"),
+      legendLine(OG.REFINED_COLOR || "#3a5fb0", "10 3 2 3", 1.8, "told, classifier moved it up" + (view && view.refinedLinks ? " (" + view.refinedLinks + " here)" : "")),
+      legendLine(OG.TOLD_COLOR || "#d0262d", null, 2.4, "told, not in the classified dump" + (view && view.toldLinks ? " (" + view.toldLinks + " here)" : "")),
+    );
+  }
+
+  function syncHierButtons(busy) {
+    const told = !!(model && model.graph.variant === "told");
+    hierButtons.inferred.setAttribute("aria-pressed", told ? "false" : "true");
+    hierButtons.told.setAttribute("aria-pressed", told ? "true" : "false");
+    if (busy) hierButtons.told.setAttribute("aria-busy", "true");
+    else hierButtons.told.removeAttribute("aria-busy");
+    document.body.classList.toggle("told-mode", told);
+  }
+
+  async function setHierarchy(which) {
+    if (!model) return;
+    const current = model.graph.variant === "told" ? "told" : "inferred";
+    if (which === current) return;
+    if (which === "inferred") {
+      model.graph = model.inferredGraph || model.graph;
+    } else {
+      syncHierButtons(true);
+      setStatus("Loading the told hierarchy…");
+      try {
+        const told = await OG.loadToldVariant(model);
+        model.inferredGraph = model.inferredGraph || model.graph;
+        model.toldMeta = told.meta;
+        model.graph = told.graph;
+      } catch (err) {
+        syncHierButtons(false);
+        setStatus("Could not load the told hierarchy. " + (err.message || String(err)));
+        return;
+      }
+    }
+    state.expanded = new Set();
+    state.childExtra = 0;
+    syncHierButtons(false);
+    draw();
+    fillPanel(state.focus);
+  }
+
+  hierButtons.inferred.addEventListener("click", () => setHierarchy("inferred"));
+  hierButtons.told.addEventListener("click", () => setHierarchy("told"));
 
   function bindGraph(view) {
     const svg = d3.select("#g");
@@ -927,11 +1018,27 @@
     qualSlot.el.hidden = rubricSlot.el.hidden = grailSlot.el.hidden = true;
 
     const parents = hier.parentsOf(id);
-    const parentSlot = section("Parents");
+    const toldMode = g.variant === "told";
+    const parentSlot = section(toldMode ? "Told parents" : "Parents", toldMode ? "Told parents come from the OWL translation of the GRAIL sources, before classification: SubClassOf(A B) and the named base B of a definition A = B which …. A blue “moved up” mark means the classifier kept B as an ancestor but put more specific parents in between; a red “not in dump” mark means the classified dump does not have B above this concept at all." : null);
     const shownParents = parents.filter((pid) => state.showGen || !g.gen[pid]);
     const hiddenParents = parents.length - shownParents.length;
-    fillLinks(parentSlot.body, shownParents, (pid) => OG.isToldLink(g, id, pid));
+    const markFor = (child, parent) => {
+      if (!toldMode) return OG.isToldLink(g, child, parent);
+      const v = OG.linkVariant(g, child, parent);
+      return v === "missing" ? true : v === "refined" ? "refined" : false;
+    };
+    fillLinks(parentSlot.body, shownParents, (pid) => markFor(id, pid));
     if (hiddenParents) note(parentSlot.body, hiddenParents + (hiddenParents === 1 ? " generated parent hidden" : " generated parents hidden"), "Turn on “Show generated classes” to list them.");
+
+    if (toldMode && g.base) {
+      // Compare with the classifier's parents of the same group.
+      const base = g.base;
+      const baseParents = OG.collapsedHierarchy(base, id).parentsOf(id).filter((pid) => state.showGen || !base.gen[pid]);
+      const toldSet = new Set(parents.map((pid) => base.canon[pid]));
+      const clsSlot = section("Classifier parents", "The direct parents of this concept in the classified (inferred) hierarchy, for comparison with the told parents above. “not told” marks a parent the classifier found that no told axiom of this concept states.");
+      fillLinks(clsSlot.body, baseParents, (pid) => (toldSet.has(base.canon[pid]) ? false : "inferred"));
+      parentSlot.el.after(clsSlot.el);
+    }
 
     const allKids = hier.childrenOf(id);
     const kids = allKids.filter((cid) => state.showGen || !g.gen[cid]);
@@ -951,7 +1058,7 @@
         const hay = (OG.groupHeading(g, cid) + " " + OG.spaced(OG.groupHeading(g, cid))).toLowerCase();
         return hay.includes(needle);
       }).slice(0, 80);
-      fillLinks(childList, matched, (cid) => OG.isToldLink(g, cid, id));
+      fillLinks(childList, matched, (cid) => markFor(cid, id));
       if (kids.length > matched.length) note(childList, "Showing " + matched.length + " of " + kids.length + ".");
     };
     filter.addEventListener("input", paintKids);
@@ -1105,11 +1212,25 @@
       a.title = OG.groupHeading(model.graph, id);
       if (model.graph.gen[id]) a.className = "gen";
       li.append(a);
-      if (isTold && isTold(id)) {
+      const told = isTold ? isTold(id) : false;
+      if (told === "refined") {
+        const mark = document.createElement("span");
+        mark.className = "refined-mark";
+        mark.textContent = "moved up";
+        mark.title = "Told parent that the classifier kept as an ancestor, with more specific parents in between";
+        li.append(" ", mark);
+      } else if (told === "inferred") {
+        const mark = document.createElement("span");
+        mark.className = "refined-mark";
+        mark.textContent = "not told";
+        mark.title = "Found by the classifier; no told axiom of this concept states it";
+        li.append(" ", mark);
+      } else if (told) {
         const mark = document.createElement("span");
         mark.className = "told-mark";
-        mark.textContent = "told";
-        mark.title = "Told OWL SubClassOf link, not from the classified dump";
+        const toldMode = model.graph.variant === "told";
+        mark.textContent = toldMode ? "not in dump" : "told";
+        mark.title = toldMode ? "Told parent that the classified dump does not have above this concept" : "Told OWL SubClassOf link, not from the classified dump";
         li.append(" ", mark);
       }
       list.append(li);

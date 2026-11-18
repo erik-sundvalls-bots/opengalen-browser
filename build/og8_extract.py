@@ -1526,6 +1526,13 @@ def build(owl_path: Path, grail_path: Path, out_dir: Path, report_path: Path) ->
             print(" -", label, file=sys.stderr)
         return meta | {"ok": False}
     print("all checks passed", flush=True)
+    # The told (pre-classification) variant is keyed to this graph's ids and
+    # built stamp, so rebuild it with every graph. It is loaded lazily.
+    import og8_told
+
+    print("building the lazy told-hierarchy variant", flush=True)
+    if not og8_told.build(owl_path, out_dir)["ok"]:
+        return meta | {"ok": False}
     return meta | {"ok": True}
 
 

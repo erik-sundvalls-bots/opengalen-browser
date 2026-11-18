@@ -16,7 +16,7 @@
   document.head.appendChild(base);
 })();
 </script>
-<link rel="stylesheet" href="css/app.css?v=14">
+<link rel="stylesheet" href="css/app.css?v=15">
 </head>
 <body>
 <header class="topbar">
@@ -39,12 +39,18 @@
     <label class="switch-row" id="mark-row">Cluster-marking
       <button type="button" id="tog-mark" class="switch" role="switch" aria-checked="true" aria-label="Shade expanded clusters" title="Shade expanded clusters"></button>
     </label>
+    <div class="variant-row" role="group" aria-label="Hierarchy">
+      <span>Hierarchy</span>
+      <button type="button" id="hier-inferred" class="seg" aria-pressed="true" title="The classified hierarchy the GALEN team published (default)">Inferred</button>
+      <button type="button" id="hier-told" class="seg" aria-pressed="false" title="The told OWL axioms before classification. Loaded only when you click (about 230 KB).">Told (original)</button>
+    </div>
   </div>
 </header>
 <div class="layout">
   <div id="stage">
     <div id="status">Loading the hierarchy…</div>
     <div id="told-banner" role="status" hidden></div>
+    <div id="variant-legend" role="note" aria-label="Told hierarchy legend" hidden></div>
     <svg id="g" role="img" aria-label="Concept neighbourhood"></svg>
     <div class="zoom-controls" aria-label="Zoom">
       <button type="button" data-zoom="in" aria-label="Zoom in" title="Zoom in"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/><path d="M12 10h-2v2H9v-2H7V9h2V7h1v2h2z"/></svg></button>
@@ -109,6 +115,7 @@
     <li><b>Sanctions and qualifiers</b> work the same way as Relationships: off until you turn the toggle on, not stored in the address, with a scrollable checkbox list, All / None, and “shown X of N”. They are the allowed roles for this concept, drawn as dotted arrows in a single colour, with the same style of arrowhead as Relationships. A sanction says what is allowed; a definition relationship says what this concept has.</li>
     <li><b>Incoming relationships</b> list the concepts whose definitions use the focus as a role filler, for example <i>Thumb hasOrdinalPosition first</i>. Nothing is ticked to start with. Tick a row to add that concept to the graph, with a dashed arrow pointing at the focus. A filter narrows long lists.</li>
     <li><b>Red is-a links</b> are told OWL <code>SubClassOf</code> parents that the published classified dump omitted (mostly the value-type branch, such as <i>first</i> under <i>OrdinalPositionValueType</i>). A banner warns when the open concept has one. See <a href="https://github.com/erik-sundvalls-bots/opengalen-browser/issues/10">issue #10</a>.</li>
+    <li><b>Hierarchy: Inferred | Told (original)</b> sits beside the switches. <b>Inferred</b> is the default: the hierarchy GALEN’s own classifier produced. <b>Told (original)</b> shows the parents written in the OWL translation of the GRAIL sources, before any classification: named <code>SubClassOf</code> parents and the named base of each definition (<i>B</i> in <code>A = B which …</code>). Its data (about 230 KB) is fetched only the first time you click it, so the normal start-up is unchanged. In the told view, grey and orange is-a links are also direct classified links, dash-dot blue links are told parents the classifier moved further up (more specific parents in between), and red links are told parents the classified dump does not have above the concept at all. The side panel lists the classifier’s parents for comparison.</li>
   </ul>
   <form method="dialog"><button type="submit" id="about-ok">Continue</button></form>
 </dialog>
@@ -117,10 +124,10 @@
   <button type="button" id="tip-x" aria-label="Close preview" hidden>×</button>
   <div id="tip-body"></div>
 </div>
-<script src="lib/d3.min.js?v=14"></script>
-<script src="lib/d3-dag.min.js?v=14"></script>
-<script src="js/data.js?v=14"></script>
-<script src="js/graph.js?v=14"></script>
-<script src="js/app.js?v=14"></script>
+<script src="lib/d3.min.js?v=15"></script>
+<script src="lib/d3-dag.min.js?v=15"></script>
+<script src="js/data.js?v=15"></script>
+<script src="js/graph.js?v=15"></script>
+<script src="js/app.js?v=15"></script>
 </body>
 </html>
