@@ -221,39 +221,45 @@
     const links = [];
     const seenLink = new Set();
     // told: the child-parent pair is a told OWL parent the classified dump omitted.
-    function link(from, to, kind, told) {
+    // refined (told hierarchy only): a told parent the classifier kept as an
+    // ancestor but moved further up, with more specific parents in between.
+    function link(from, to, kind, told, refined) {
       if (!from || !to || from === to || !nodes.has(from) || !nodes.has(to)) return;
       const key = from + ">" + to;
       if (seenLink.has(key)) {
-        if (told) {
+        if (told || refined) {
           const existing = links.find((item) => item.source === from && item.target === to);
-          if (existing) existing.told = true;
+          if (existing && told) existing.told = true;
+          if (existing && refined && !existing.told) existing.refined = true;
         }
         return;
       }
       seenLink.add(key);
-      links.push({ source: from, target: to, kind, told: !!told });
+      links.push({ source: from, target: to, kind, told: !!told, refined: !told && !!refined });
     }
-    const toldLink = (child, parent) => (OG.isToldLink ? OG.isToldLink(graph, child, parent) : false);
+    const toldVariant = graph.variant === "told";
+    const variantOf = (child, parent) => (toldVariant && OG.linkVariant ? OG.linkVariant(graph, child, parent) : null);
+    const toldLink = (child, parent) => (toldVariant ? variantOf(child, parent) === "missing" : OG.isToldLink ? OG.isToldLink(graph, child, parent) : false);
+    const refinedLink = (child, parent) => variantOf(child, parent) === "refined";
     for (const node of nodes.values()) {
       if (node.kind !== "concept") continue;
       const id = node.concept;
       if (node.role === "child") {
-        link("n" + focus, node.key, "child", toldLink(id, focus));
+        link("n" + focus, node.key, "child", toldLink(id, focus), refinedLink(id, focus));
         continue;
       }
       if (node.role === "sib") {
         const parent = parentOf(focus).find((item) => hier.childrenOf(item).includes(id));
-        link(parent != null ? rep(parent) : "n" + focus, node.key, "sib", parent != null && toldLink(id, parent));
+        link(parent != null ? rep(parent) : "n" + focus, node.key, "sib", parent != null && toldLink(id, parent), parent != null && refinedLink(id, parent));
         continue;
       }
-      for (const parent of parentOf(id)) link(rep(parent), node.key, "anc", toldLink(id, parent));
+      for (const parent of parentOf(id)) link(rep(parent), node.key, "anc", toldLink(id, parent), refinedLink(id, parent));
     }
     for (const node of nodes.values()) {
       if (node.kind !== "cluster") continue;
       for (const id of node.members) {
-        for (const parent of parentOf(id)) link(rep(parent), node.key, "anc", toldLink(id, parent));
-        for (const child of kids.get(id) || []) link(node.key, rep(child), "anc", toldLink(child, id));
+        for (const parent of parentOf(id)) link(rep(parent), node.key, "anc", toldLink(id, parent), refinedLink(id, parent));
+        for (const child of kids.get(id) || []) link(node.key, rep(child), "anc", toldLink(child, id), refinedLink(child, id));
       }
     }
     if (more) link("n" + focus, "more", "child");
@@ -297,6 +303,8 @@
       qualLinks,
       incLinks,
       toldLinks: links.filter((item) => item.told).length,
+      refinedLinks: links.filter((item) => item.refined).length,
+      variant: graph.variant || "inferred",
       childHidden,
       ancestorCount: anc.size,
       visibleCount: vis.size,
@@ -486,16 +494,18 @@
       const pts = link.points.map((p) => (Array.isArray(p) ? p : [p.x, p.y]));
       const kind = view.links.find((item) => item.source === link.source.data.key && item.target === link.target.data.key);
       const told = !!(kind && kind.told);
-      const color = told ? (OG.TOLD_COLOR || "#d0262d") : kind && kind.kind === "child" ? "#c46b1a" : kind && kind.kind === "sib" ? "#8a8175" : "#0f6e6b";
+      const refined = !told && !!(kind && kind.refined);
+      const color = told ? (OG.TOLD_COLOR || "#d0262d") : refined ? (OG.REFINED_COLOR || "#3a5fb0") : kind && kind.kind === "child" ? "#c46b1a" : kind && kind.kind === "sib" ? "#8a8175" : "#0f6e6b";
       drawn.push({ pts, color, source: link.source.data, target: link.target.data });
-      linkG.append("path")
-        .attr("class", told ? "lk dimmable told-link" : "lk dimmable")
+      const path = linkG.append("path")
+        .attr("class", told ? "lk dimmable told-link" : refined ? "lk dimmable refined-link" : "lk dimmable")
         .attr("d", linkGen(pts))
         .attr("stroke", color)
-        .attr("stroke-opacity", told ? .95 : .55)
-        .attr("stroke-width", told ? 2.4 : 1.3)
+        .attr("stroke-opacity", told ? .95 : refined ? .85 : .55)
+        .attr("stroke-width", told ? 2.4 : refined ? 1.8 : 1.3)
         .attr("stroke-linecap", "round")
         .datum({ source: link.source.data, target: link.target.data });
+      if (refined) path.attr("stroke-dasharray", "10 3 2 3");
     }
 
     for (const node of dag) {

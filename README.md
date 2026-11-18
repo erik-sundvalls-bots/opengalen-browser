@@ -36,6 +36,7 @@ Acknowledgement, as GOSL requires at start-up and within the application:
 - Permalink a concept with `#concept=Name` (a `?concept=Name` query is accepted and rewritten to that hash). For an equivalence group the permalink may use any of the names.
 - The About and licence dialog opens automatically only on a plain visit, with no concept in the address. A URL that already names a concept, such as `#concept=Thumb`, goes straight to the graph. The About button in the side strip still opens the dialog.
 - Repeat visits are cached in IndexedDB, including offline reuse of what has already been fetched.
+- **Hierarchy: Inferred | Told (original)** beside the switches. *Inferred* (the default) is the classified dump. *Told* shows the parents stated in the OWL translation of the GRAIL sources, before any classification. Its data is fetched only on the first click (about 240 KB), so the normal start-up is unchanged. See [Told hierarchy variant](#told-hierarchy-variant).
 
 Generated classes are real nodes in the published hierarchy (the OWL translation names anonymous expressions by concatenating them). A class is treated as generated when its name contains two or more `which` glue words, or one `which` and is at least 56 characters long. Shorter single-`which` names such as `PhenomenonwhichinvolvesHeart` stay visible, because they are the ordinary inferred parents.
 
@@ -44,8 +45,9 @@ Generated classes are real nodes in the published hierarchy (the OWL translation
 Requirements: Python 3.9+ with the standard library only. From the repository root:
 
 ```bash
-python3 build/og8_extract.py
-python3 build/test_render.py
+python3 build/og8_extract.py      # also rebuilds site/data/told-variant/
+python3 build/og8_told.py         # only the told variant, against the committed graph
+python3 -m unittest discover -s build -p 'test_*.py'
 ```
 
 The script reads:
@@ -73,7 +75,29 @@ Commit the generated `site/data/` if you want Pages to serve it without rebuildi
 | `site/data/i/NNN.json.gz` | Incoming index: the same rows reversed, `[property, source]`, sharded by filler concept. Loaded when a concept is opened. |
 | `site/data/told.json.gz` | Told OWL `SubClassOf` parents restored for concepts the dump left parentless: `[child, parent, file, line]`, plus the skipped pairs and why. Loaded at start (8 KB) so those links can be drawn in red. |
 
-The binary layouts are documented at the top of `build/og8_extract.py`.
+| `site/data/told-variant/meta.json`, `parents.bin.gz` | The told (pre-classification) hierarchy, built by `build/og8_told.py`. **Not** part of the first load: fetched only when the user clicks *Told (original)*. |
+
+The binary layouts are documented at the top of `build/og8_extract.py` and `build/og8_told.py`.
+
+### Told hierarchy variant
+
+The OpenGALEN 8 release ships seven classified hierarchy dumps (`Hierarchy_Dumps/*.dump`: with and without property chains, for the CRM alone and with the disease, procedure and drug extensions). It also ships the compiled ClaW/KnoME model (`opengalen8-compiled.zip`, a binary `.gra` file that needs the GALEN tools). It does **not** ship a told, pre-classification hierarchy file. The browser's default graph is the with-property-chains full dump.
+
+`build/og8_told.py` derives the told hierarchy from the same OWL-F files the main extract reads. According to `OpenGALEN_OWL_Translations_Documentation.pdf` (v1.02, 2010-01-16, in the release), those files are the GRAIL statements copied out one by one during compilation. Nothing is reasoned. A told parent of a named class `A` is a named class `B` in one of these axioms:
+
+| Kind | OWL axiom | GRAIL form | Links |
+|---|---|---|---|
+| 0 | `SubClassOf(A B)` | `B newSub A` | 13,164 |
+| 1 | `EquivalentClasses(A ObjectIntersectionOf(B …))` | `(B which …) name A` | 108,011 |
+| 2 | `SubClassOf(A ObjectIntersectionOf(B …))` | | 315 |
+
+That gives 121,490 unique told links on the graph's 125,511 ids. 81 statements with `owl:Thing` as the parent, 81 that name a class that is not in the graph, and 7 self-links are skipped. No cycles. The variant reuses the default graph's ids, names, equivalence groups (which already include the OWL named equivalences) and canonical names, so a concept keeps its node and address in both views. Compared with the classified dump (without the 103 restored red links):
+
+- 31,995 told links are also direct classified links (drawn as usual);
+- 89,249 are still ancestors after classification, but the classifier put more specific parents in between (drawn **blue, dash-dot**, “moved up” in the panel);
+- 246 are not above the child in the dump at all (drawn **red**, “not in dump”). These are the 103 links the main extract already restores, plus 143 definitional parents of dump-parentless concepts, for example `AbdominalFistula` = `Fistula which isPartitivelyTo AbdominalSkin`, which has no parent in the dump (93 of the 143 are long `DrugInteraction…` classes). They are listed in `told-variant/meta.json` under `notInferred`.
+
+In the told view the side panel shows *Told parents* and, for comparison, the *Classifier parents* of the same concept, with “not told” on parents only the classifier found. Children, ancestors, clusters, relationships and incoming rows all follow the told parents. Links that skip hidden generated classes are drawn in the default style, because no single told statement matches them.
 
 ## What the build checked
 
@@ -103,6 +127,7 @@ Gzipped artefacts from the last build:
 | 133 incoming-index shards (`i/`) | 436,917 |
 | `told.json.gz` | 8,214 |
 | `site/lib/` d3 + d3-dag | about 375,000 |
+| `told-variant/` (lazy, on click only) | 244,572 (`parents.bin.gz` 234,260 + `meta.json` 10,312) |
 
 The first view fetches the graph, the search index, the labels and `meta.json`: about **6.3 MB** on the wire. Definition shards, and the relationship shards for non-is-a roles, load when a concept is opened. The relationship extract is 149,129 edges on 106,275 concepts in 52 property groups, and it is not part of the first load. On a local server the page was interactive in about **0.6 s**, of which the 6 MB download was a few tens of milliseconds, so building the indexes and the first Sugiyama layout is about half a second once the bytes have arrived. Repeat visits read those files from IndexedDB.
 

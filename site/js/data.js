@@ -155,9 +155,11 @@
 
   function isBannedBag(graph, id) {
     const members = rawEquivalents(graph, id);
+    // The told variant keeps the classified graph's groups and banned bags.
+    const base = graph.base || graph;
     for (const m of members) {
       if (graph.names[m] === "ZootleWordle") return true;
-      for (const p of graph.parents[m]) {
+      for (const p of base.parents[m]) {
         if (graph.names[p] === "BannedKnowledgeNames") return true;
       }
     }
@@ -496,8 +498,11 @@
     graph.told = { up, down, rows, count: rows.length };
   }
 
-  /* True when some member of child's group has a told parent in parent's group. */
+  /* True when some member of child's group has a told parent in parent's group.
+     In the told hierarchy every link is told, so this marks the told links the
+     classified dump does not have at all (the same red meaning). */
   function isToldLink(graph, child, parent) {
+    if (graph.variant === "told") return linkVariant(graph, child, parent) === "missing";
     const told = graph.told;
     if (!told || !told.count || child == null || parent == null) return false;
     const parentGroup = equivMembers(graph, parent);
@@ -515,6 +520,121 @@
     if (!told || !told.count) return [];
     const members = new Set(equivMembers(graph, id));
     return told.rows.filter((row) => members.has(row.child) || members.has(row.parent));
+  }
+
+  /* Told (asserted, pre-classification) hierarchy, built by
+     build/og8_told.py into data/told-variant/. Fetched only when the user
+     switches the hierarchy to Told, never on first load. Ids are the ids of
+     graph.bin.gz, so the manifest must name the same build. */
+  const TOLD_KIND = [
+    "SubClassOf(A B)",
+    "EquivalentClasses(A ObjectIntersectionOf(B …))",
+    "SubClassOf(A ObjectIntersectionOf(B …))",
+  ];
+  const VARIANT_DIRECT = 0x80;
+  const VARIANT_ANCESTOR = 0x40;
+  const REFINED_COLOR = "#3a5fb0";
+  let toldVariantPromise = null;
+
+  function parseToldParents(buf, n) {
+    const view = new DataView(buf);
+    const magic = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3));
+    if (magic !== "OG8T") throw new Error("Unexpected told hierarchy file.");
+    if (view.getUint32(4, true) !== 1) throw new Error("Unknown told hierarchy version.");
+    const count = view.getUint32(8, true);
+    if (count !== n) throw new Error("The told hierarchy was built for another graph (" + count + " concepts, expected " + n + ").");
+    const nEdges = view.getUint32(12, true);
+    let o = 16;
+    const parOff = u32(view, o, n + 1); o += (n + 1) * 4;
+    const parIds = u32(view, o, nEdges); o += nEdges * 4;
+    const kinds = new Uint8Array(buf, o, nEdges);
+    const parents = new Array(n);
+    const parentKinds = new Array(n);
+    for (let i = 0; i < n; i++) {
+      parents[i] = Array.from(parIds.subarray(parOff[i], parOff[i + 1]));
+      parentKinds[i] = Array.from(kinds.subarray(parOff[i], parOff[i + 1]));
+    }
+    return { parents, parentKinds, nEdges };
+  }
+
+  /* A graph object with the told parents and the classified graph's names,
+     ids, equivalence groups and canonical names, so every view works on it. */
+  function makeToldGraph(base, parsed) {
+    const { n, names } = base;
+    const children = new Array(n);
+    for (let i = 0; i < n; i++) children[i] = [];
+    for (let i = 0; i < n; i++) for (const p of parsed.parents[i]) children[p].push(i);
+    for (let i = 0; i < n; i++) {
+      if (children[i].length > 1) {
+        children[i].sort((a, b) => {
+          const na = names[a].toLowerCase();
+          const nb = names[b].toLowerCase();
+          return na < nb ? -1 : na > nb ? 1 : a - b;
+        });
+      }
+    }
+    return Object.assign({}, base, {
+      parents: parsed.parents,
+      children,
+      parentKinds: parsed.parentKinds,
+      variant: "told",
+      base,
+      toldEdges: parsed.nEdges,
+    });
+  }
+
+  function loadToldVariant(model) {
+    if (!toldVariantPromise) {
+      toldVariantPromise = (async () => {
+        const res = await fetch(url("data/told-variant/meta.json"), { cache: "no-cache" });
+        if (!res.ok) throw new Error("told-variant/meta.json (" + res.status + ")");
+        const meta = await res.json();
+        if (meta.graphBuilt !== model.meta.built) throw new Error("The told hierarchy does not match this graph build.");
+        const raw = await cachedBytes("data/told-variant/" + meta.files.parents, model.meta.built + "|told");
+        const graph = makeToldGraph(model.graph.base || model.graph, parseToldParents(raw, (model.graph.base || model.graph).n));
+        return { meta, graph };
+      })();
+      toldVariantPromise.catch(() => { toldVariantPromise = null; });
+    }
+    return toldVariantPromise;
+  }
+
+  /* How a drawn is-a link relates to the classified hierarchy, in told mode:
+     "direct"  the told parent is also a direct classified parent;
+     "refined" the classifier put more specific parents in between;
+     "missing" the classified dump does not have it above the child at all.
+     null in the classified view, or when no told pair matches (for example a
+     link that skips hidden generated classes). */
+  function linkVariant(graph, child, parent) {
+    if (!graph || graph.variant !== "told" || child == null || parent == null) return null;
+    const parentGroup = equivMembers(graph, parent);
+    let best = 0;
+    let found = false;
+    for (const m of equivMembers(graph, child)) {
+      const ups = graph.parents[m];
+      const kinds = graph.parentKinds[m];
+      for (let i = 0; i < ups.length; i++) {
+        if (!parentGroup.includes(ups[i])) continue;
+        found = true;
+        const k = kinds[i];
+        if (k & VARIANT_DIRECT) return "direct";
+        if (k & VARIANT_ANCESTOR) best = 1;
+      }
+    }
+    if (!found) return null;
+    return best ? "refined" : "missing";
+  }
+
+  /* Statement kinds (TOLD_KIND indexes) of the told links child -> parent group. */
+  function toldStatementKinds(graph, child, parent) {
+    if (!graph || graph.variant !== "told") return [];
+    const parentGroup = equivMembers(graph, parent);
+    const out = new Set();
+    for (const m of equivMembers(graph, child)) {
+      const ups = graph.parents[m];
+      for (let i = 0; i < ups.length; i++) if (parentGroup.includes(ups[i])) out.add(graph.parentKinds[m][i] & 0x0f);
+    }
+    return [...out].sort();
   }
 
   const REL_COLORS = ["#6b3fa0", "#c45a5a", "#1d6a9a", "#a67c12", "#0e7a62", "#b5485d", "#3d7a4a", "#7a4b8c", "#c46b1a", "#3a4f8c", "#8a4b2f", "#5a6b2f", "#8a3d6b", "#2f5f73", "#6b5420", "#4a3d7a"];
@@ -596,6 +716,14 @@
   }
 
   OG.loadAll = loadAll;
+  OG.loadToldVariant = loadToldVariant;
+  OG.makeToldGraph = makeToldGraph;
+  OG.parseToldParents = parseToldParents;
+  OG.parseGraph = parseGraph;
+  OG.linkVariant = linkVariant;
+  OG.toldStatementKinds = toldStatementKinds;
+  OG.TOLD_KIND = TOLD_KIND;
+  OG.REFINED_COLOR = REFINED_COLOR;
   OG.loadIncoming = loadIncoming;
   OG.isToldLink = isToldLink;
   OG.toldRowsFor = toldRowsFor;
