@@ -1,0 +1,39 @@
+{
+  "pdf": "https://pen-pad-revival.github.io/assets/PEN-PAD-GALEN-GRAIL.pdf",
+  "chapters": [
+    {
+      "id": "orientation",
+      "chapter": 0,
+      "title": "Orientation",
+      "kind": "tour",
+      "file": "orientation.json",
+      "audiences": ["newcomer", "clinician", "informatician"]
+    },
+    {
+      "id": "layers",
+      "chapter": 2,
+      "title": "Three layers: meaning, background, data",
+      "kind": "lesson",
+      "file": "layers.json",
+      "audiences": ["newcomer", "clinician", "informatician"]
+    },
+    {
+      "id": "sanctions",
+      "chapter": 3,
+      "title": "Sanctions",
+      "kind": "lesson",
+      "status": "awaiting-author",
+      "file": "sanctions.json",
+      "audiences": ["informatician", "newcomer"]
+    },
+    {
+      "id": "composition",
+      "chapter": 4,
+      "title": "Composition",
+      "kind": "lesson",
+      "status": "awaiting-author",
+      "file": "composition.json",
+      "audiences": ["clinician", "informatician"]
+    }
+  ]
+}

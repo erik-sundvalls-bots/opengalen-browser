@@ -33,8 +33,9 @@ Acknowledgement, as GOSL requires at start-up and within the application:
 - **Relationships** and **Sanctions and qualifiers** each have a side-panel list of checkboxes, with All / None and a “shown X of N” count. The list scrolls when it is long. The first 16 items are checked to start with; you can check more, or fewer. The toggle draws only the checked items, and is off until you turn it on (ticking a box while it is off turns it on). The ticks stay until you open another concept.
 - Switches beside the search box for generated classes (on at start), labels, and clustering. Cluster-marking appears while clustering is on. Siblings is a side-panel button. Zoom and fit sit at the upper right of the graph. Click an expanded cluster’s area, not a node, to collapse it. With cluster-marking off that area is invisible.
 - Hide the long generated `…which…which…` class names, or show them. They are shown at start.
-- Permalink a concept with `#concept=Name` (a `?concept=Name` query is accepted and rewritten to that hash). For an equivalence group the permalink may use any of the names.
-- The About and licence dialog opens automatically only on a plain visit, with no concept in the address. A URL that already names a concept, such as `#concept=Thumb`, goes straight to the graph. The About button in the side strip still opens the dialog.
+- Permalink a concept with `#concept=Name` (a `?concept=Name` query is accepted and rewritten to that hash). For an equivalence group the permalink may use any of the names. A lesson can share that address: `#concept=Pericarditis&lesson=layers&step=1`. Unknown extra fields are ignored, and a plain `#concept=Name` link is unchanged.
+- The About and licence dialog opens automatically only on a plain visit, with no concept and no lesson in the address. A URL that already names a concept, such as `#concept=Thumb`, or a lesson, such as `#lesson=orientation`, goes straight to the graph. The About button in the side strip still opens the dialog. **Start the tour** is in that dialog. It does not start by itself.
+- A short tutorial (orientation tour, and a chapter on meaning, background knowledge, and data) loads only when you open it. Progress stays in this browser’s `localStorage` and is not sent anywhere. See [Tutorial](#tutorial).
 - Repeat visits are cached in IndexedDB, including offline reuse of what has already been fetched.
 - **Hierarchy: Inferred | Told (original)** beside the switches. *Inferred* (the default) is the classified dump. *Told* shows the parents stated in the OWL translation of the GRAIL sources, before any classification. Its data is fetched only on the first click (about 240 KB), so the normal start-up is unchanged. See [Told hierarchy variant](#told-hierarchy-variant).
 
@@ -145,6 +146,17 @@ The first view fetches the graph, the search index, the labels and `meta.json`: 
 - Definition roles and sanctions can each be drawn from a scrollable checkbox list in the side panel. The first 16 items are checked to start with; All / None and “shown X of N” let you pick a subset, or every item, when a concept has many (AbdominalCavity has 60 sanctions). The section toggle draws only the checked items, off until you turn it on. Ticking a box while the toggle is off turns drawing on. The choice is kept in the session for that concept and is cleared when you open another. Sanctions are dotted arrows in a single colour; they are not stored in the address. `topicNecessarily` is read from the GRAIL sources when the line is a simple subject-qualifier-role-object statement. The OWL file itself only distinguishes sensible (`S-SANCTION-`) and grammatical (`G-SANCTION-`) sanctions.
 - `#concept=first` is an ordinal-position selector, not a free-floating clinical concept. GRAIL declares `OrdinalPositionValueType newSub [first second … fifteenth]` in `GRAIL_Sources/64-3434624046.grl`. OWL has the told parent `SubClassOf(first OrdinalPositionValueType)` in `OpenGALEN8_FoundationModel_TopClassesForMedicalDomain.owl` line 1763, and `OrdinalPositionValueType` ⊑ `SymbolicValueType` in `OpenGALEN8_GenericModel.owl` line 156. The classified dump has no `(implies first …)` line, so earlier builds showed `first` with no parents. The extract restores those told parents and draws them in red. The **Incoming relationships** list on `first` shows the 11 concepts, in 9 merged nodes, whose definitions have `hasOrdinalPosition first`. They include Thumb = Pollux, Hallux = GreatToe, FirstMetacarpal and related first-position structures. Tick one to draw it.
 - Generated-class detection is a name heuristic, not an OWL flag. Short single-`which` names such as `PhenomenonwhichinvolvesHeart` stay visible.
+
+## Tutorial
+
+The browser includes the start of an interactive reading of Alan Rector’s draft *PEN&PAD, GALEN & GRAIL* (November 2026). The design is [docs/TUTORIAL-DESIGN.md](docs/TUTORIAL-DESIGN.md). Lesson files live in `site/lessons/` and are fetched with `site/js/tutorial.js` and `site/css/tutorial.css` the first time you open a lesson, not with the initial page.
+
+- **Start the tour** in About walks search, the graph, the side panel, clustering, and the red told-parent link on `#concept=first`.
+- **Three layers** opens `Pericarditis`, `Bird`, `GramPositiveBacterium`, and `Gorilla`, with short quotations and page numbers from the draft. Patient data is described as out of scope for this graph.
+- **Sanctions** and **Composition** are placeholders. They wait on Alan Rector for two open questions: how to frame sanctions, given the draft says they were omitted from the OpenGrail models, and whether the draft’s property names correspond to the names in this dump. Those notes are marked `TODO(alan)` in the lesson files. Chapter 5 is not built.
+- The book icon on the side strip opens the chapter list. **Reset tutorial progress** is in About.
+
+Quotations were checked against the draft PDF. They are not a copy of the paper.
 
 ## Develop the page locally
 

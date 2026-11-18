@@ -11,9 +11,10 @@
   }
   document.getElementById("about-btn").addEventListener("click", openAbout);
   about.addEventListener("close", () => { if (model) draw(); });
-  // A permalink or query that already names a concept skips the automatic
-  // About dialog. A plain visit still opens it. The About button always can.
-  if (!requestedName()) openAbout();
+  // A permalink, a lesson address, or a query that already names a concept
+  // skips the automatic About dialog. A plain visit still opens it.
+  // The tour does not start by itself. The About button always can.
+  if (!requestedName() && !hashLesson()) openAbout();
 
   function setPanelOpen(open) {
     panelEl.classList.toggle("is-collapsed", !open);
@@ -60,9 +61,17 @@
   function setStatus(text) { status.textContent = text || ""; }
 
   function hashName() {
-    const match = /^#concept=(.*)$/.exec(location.hash);
-    if (!match || !match[1]) return "";
-    try { return decodeURIComponent(match[1]); } catch (err) { return match[1]; }
+    const concept = OG.parseHash(location.hash).concept;
+    return concept ? concept.trim() : "";
+  }
+
+  function hashLesson() {
+    const lesson = OG.parseHash(location.hash).params.lesson;
+    return lesson ? String(lesson) : "";
+  }
+
+  function conceptHref(name) {
+    return OG.buildHash(name, OG.parseHash(location.hash).params);
   }
 
   function queryName() {
@@ -80,8 +89,8 @@
   }
 
   function go(name, push) {
-    const next = "#concept=" + encodeURIComponent(name);
-    if (location.hash === next) showFocus(name);
+    const next = OG.buildHash(name, OG.parseHash(location.hash).params);
+    if ((location.hash || "") === next) showFocus(name);
     else if (push === false) history.replaceState(null, "", next);
     else location.hash = next;
   }
@@ -200,6 +209,7 @@
       );
       syncToldBanner(lastView);
       syncVariantLegend(lastView);
+      document.dispatchEvent(new CustomEvent("og-draw"));
     } catch (err) {
       setStatus("Could not lay out this neighbourhood. " + err.message);
     }
@@ -641,6 +651,7 @@
     document.querySelectorAll(".qual-line").forEach((li) => paintPhrase(li, li.dataset.phrase || ""));
     const grail = document.getElementById("grail-text");
     if (grail && grail.dataset.raw) paintColored(grail, grail.dataset.raw);
+    document.dispatchEvent(new CustomEvent("og-panel"));
   }
 
   function shownCountText(selected, total) {
@@ -1009,17 +1020,20 @@
     incSlot.body.textContent = "Loading incoming relationships…";
     if (focusIncs.length && state.focus === id) paintIncSection();
     const defSlot = section("Definition");
+    defSlot.el.id = "def-section";
     defSlot.body.id = "def-text";
     defSlot.body.textContent = "Loading the definition…";
     const qualSlot = section("Sanctions and qualifiers", "Dotted arrows are sanctions and qualifiers: a role that is allowed for this concept, not a definition link. They use one colour, distinct from is-a and from the dashed definition-role arrows. Tick the items you want on the graph, as with Relationships. The first 16 are checked to start with; you can check more, or fewer. The Sanctions and qualifiers button turns drawing on or off without forgetting the ticks. A new concept resets the list. Ticking a box while drawing is off turns it on.");
     qualSlot.el.id = "qual-section";
     const rubricSlot = section("Dissection rubric");
     const grailSlot = section("GRAIL source");
+    grailSlot.el.id = "grail-section";
     qualSlot.el.hidden = rubricSlot.el.hidden = grailSlot.el.hidden = true;
 
     const parents = hier.parentsOf(id);
     const toldMode = g.variant === "told";
     const parentSlot = section(toldMode ? "Told parents" : "Parents", toldMode ? "Told parents come from the OWL translation of the GRAIL sources, before classification: SubClassOf(A B) and the named base B of a definition A = B which …. A blue “moved up” mark means the classifier kept B as an ancestor but put more specific parents in between; a red “not in dump” mark means the classified dump does not have B above this concept at all." : null);
+    parentSlot.el.id = "parent-section";
     const shownParents = parents.filter((pid) => state.showGen || !g.gen[pid]);
     const hiddenParents = parents.length - shownParents.length;
     const markFor = (child, parent) => {
@@ -1044,6 +1058,7 @@
     const kids = allKids.filter((cid) => state.showGen || !g.gen[cid]);
     const hiddenKids = allKids.length - kids.length;
     const childSlot = section("Children");
+    childSlot.el.id = "child-section";
     const filter = document.createElement("input");
     filter.id = "child-filter";
     filter.placeholder = "Filter " + allKids.length + " children";
@@ -1077,7 +1092,7 @@
         if (mid === id) continue;
         const li = document.createElement("li");
         const a = document.createElement("a");
-        a.href = "#concept=" + encodeURIComponent(g.names[mid]);
+        a.href = conceptHref(g.names[mid]);
         a.textContent = OG.spaced(g.names[mid]);
         a.title = g.names[mid];
         li.append(a);
@@ -1091,7 +1106,7 @@
       for (const mid of members) {
         const li = document.createElement("li");
         const a = document.createElement("a");
-        a.href = "#concept=" + encodeURIComponent(g.names[mid]);
+        a.href = conceptHref(g.names[mid]);
         a.textContent = OG.spaced(g.names[mid]);
         a.title = g.names[mid];
         li.append(a);
@@ -1168,6 +1183,7 @@
         paintColored(pre, rec.g);
         grailSlot.body.append(pre);
       }
+      document.dispatchEvent(new CustomEvent("og-panel"));
       if (rec && rec.l && rec.l !== title.textContent && rec.l !== (model.labels[String(id)] || "")) {
         const p = document.createElement("p");
         p.className = "muted";
@@ -1175,7 +1191,9 @@
         official.after(p);
       }
     }).catch(() => {
-      if (token === panelToken) defSlot.body.textContent = "The definition shard could not be loaded.";
+      if (token !== panelToken) return;
+      defSlot.body.textContent = "The definition shard could not be loaded.";
+      document.dispatchEvent(new CustomEvent("og-panel"));
     });
   }
 
@@ -1207,7 +1225,7 @@
     for (const id of ids) {
       const li = document.createElement("li");
       const a = document.createElement("a");
-      a.href = "#concept=" + encodeURIComponent(model.graph.names[id]);
+      a.href = conceptHref(model.graph.names[id]);
       a.textContent = OG.spaced(OG.neighbourLabel(model.graph, id));
       a.title = OG.groupHeading(model.graph, id);
       if (model.graph.gen[id]) a.className = "gen";
@@ -1428,9 +1446,97 @@
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => { if (model) draw(); }, 150);
   });
+
+  const ASSET = "16";
+  const readyWaiters = [];
+  function setSwitch(key, on) {
+    if (!model || !Object.prototype.hasOwnProperty.call(state, key)) return;
+    const want = !!on;
+    if (!!state[key] === want) return;
+    state[key] = want;
+    const ids = { showGen: "tog-gen", labels: "tog-labels", clustering: "tog-cluster", marking: "tog-mark" };
+    const button = document.getElementById(ids[key] || "");
+    if (button) button.setAttribute("aria-checked", want ? "true" : "false");
+    if (key === "showGen") state.childExtra = 0;
+    if (key === "clustering") {
+      state.expanded = new Set();
+      syncMarking();
+    }
+    if (key === "marking") syncMarking();
+    draw();
+    fillPanel(state.focus);
+  }
+  function ensureAction(act, on) {
+    const current = act === "children" ? childrenShown()
+      : act === "siblings" ? siblingsShown()
+      : act === "ancestors" ? !!state.ancestorsOnly
+      : act === "rels" ? !!state.relOn
+      : act === "quals" ? !!state.qualOn
+      : null;
+    if (current == null || current === !!on) return;
+    applyAction(act);
+  }
+  function ensureTutorial() {
+    if (!ensureTutorial.promise) {
+      ensureTutorial.promise = new Promise((resolve, reject) => {
+        const css = document.createElement("link");
+        css.rel = "stylesheet";
+        css.href = "css/tutorial.css?v=" + ASSET;
+        document.head.appendChild(css);
+        const script = document.createElement("script");
+        script.src = "js/tutorial.js?v=" + ASSET;
+        script.onload = () => {
+          if (!OG.tutorial) {
+            ensureTutorial.promise = null;
+            reject(new Error("Tutorial did not start."));
+            return;
+          }
+          resolve(OG.tutorial);
+        };
+        script.onerror = () => {
+          ensureTutorial.promise = null;
+          reject(new Error("The tutorial script did not load."));
+        };
+        document.body.appendChild(script);
+      });
+    }
+    return ensureTutorial.promise;
+  }
+  OG.tutorialHost = {
+    ready: () => !!model,
+    onReady(fn) { if (model) fn(); else readyWaiters.push(fn); },
+    go: (name) => go(name),
+    ensureAction: ensureAction,
+    setSwitch: setSwitch,
+    openPanel: () => setPanelOpen(true),
+    focusName: () => (model ? model.graph.names[state.focus] : "")
+  };
+  function startLesson(id, step) {
+    closeAbout();
+    ensureTutorial().then((api) => api.open(id, step)).catch((err) => setStatus(err.message || String(err)));
+  }
+  const tourStart = document.getElementById("tour-start");
+  if (tourStart) tourStart.addEventListener("click", () => startLesson("orientation", 1));
+  document.querySelectorAll("[data-lesson]").forEach((button) => {
+    button.addEventListener("click", () => startLesson(button.dataset.lesson, 1));
+  });
+  const lessonsBtn = document.getElementById("lessons-btn");
+  if (lessonsBtn) lessonsBtn.addEventListener("click", () => {
+    ensureTutorial().then((api) => api.openToc()).catch((err) => setStatus(err.message || String(err)));
+  });
+  const tutorialReset = document.getElementById("tutorial-reset");
+  if (tutorialReset) tutorialReset.addEventListener("click", () => {
+    ensureTutorial().then((api) => api.resetProgress()).catch((err) => setStatus(err.message || String(err)));
+  });
+
   addEventListener("hashchange", () => {
     const name = hashName();
-    if (name) showFocus(name);
+    if (name && model) {
+      const known = model.graph.byName.has(name);
+      const same = known && model.graph.names[state.focus] === name;
+      if (!same) showFocus(name);
+    }
+    if (typeof OG.onHash === "function") OG.onHash();
   });
 
   OG.loadAll(setStatus).then((loaded) => {
@@ -1441,15 +1547,20 @@
       aboutCounts.textContent = counts.concepts.toLocaleString() + " concepts and "
         + counts.uniqueParentLinks.toLocaleString() + " parent links, from the with-property-chains hierarchy.";
     }
-    const named = requestedName();
+    const parsed = OG.parseHash(location.hash);
+    const named = parsed.concept || queryName();
     const start = named && model.graph.byName.has(named) ? named : model.meta.defaultConcept;
-    if (!hashName() && start) {
+    if (!parsed.concept && start) {
       const url = new URL(location.href);
       url.searchParams.delete("concept");
       const search = url.searchParams.toString();
-      history.replaceState(null, "", url.pathname + (search ? "?" + search : "") + "#concept=" + encodeURIComponent(start));
+      history.replaceState(null, "", url.pathname + (search ? "?" + search : "") + OG.buildHash(start, parsed.params));
     }
     showFocus(start);
+    readyWaiters.splice(0).forEach((fn) => fn());
+    if (OG.parseHash(location.hash).params.lesson) {
+      ensureTutorial().then((api) => api.syncFromHash()).catch((err) => setStatus(err.message || String(err)));
+    }
   }).catch((err) => {
     setStatus(err.message || String(err));
     panel.innerHTML = "<h2>The hierarchy did not load</h2><p class='muted'>" + escapeHtml(err.message || String(err)) + "</p>";

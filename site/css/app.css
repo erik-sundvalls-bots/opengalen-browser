@@ -328,14 +328,25 @@ h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; white-space: nowrap; }
 #about p, #about li { line-height: 1.45; }
 #about ul { margin: 0; padding-left: 1.15em; }
 .ack { font-weight: 650; }
-#about form { margin: 14px 0 0; }
-#about-ok {
+.about-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+.about-actions form { margin: 0; }
+#about-ok, #tour-start {
   border: 0;
   background: var(--amber);
   color: white;
   border-radius: 999px;
   padding: 7px 16px;
   font-weight: 700;
+}
+#tour-start { background: var(--teal); }
+.about-lessons, .about-reset { margin: 10px 0 0; font-size: 14px; line-height: 1.45; }
+.about-lessons button, .about-reset button {
+  border: 0;
+  background: transparent;
+  color: var(--teal);
+  padding: 0;
+  font-weight: 650;
+  text-decoration: underline;
 }
 #tip {
   position: fixed;
