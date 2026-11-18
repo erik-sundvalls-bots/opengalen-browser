@@ -347,14 +347,24 @@ Deep links are restored after `Load`. Progress ticks are read from `localStorage
 
 ## 11. Open questions for Erik and Alan
 
+Answers from Erik, 18 Nov 2026, are given under each question.
+
 1. Is the November 2026 PDF the text lessons should cite, given that it is still a draft? Should lesson quotations wait for a later revision?
+   - **Answer (Erik):** Cite and quote the draft now; no need to wait.
 2. The draft says sanctions were omitted from “the OpenGrail models” (p. 3). This browser still shows them for OpenGALEN 8. Which statement should the tutorial lead with?
+   - **Open:** asked Alan.
 3. Are the property-name mappings in §4 (especially `hasStructuralComponent` for `is_part_of` / `hasPart`, and `hasLeftRightSelector` for `hasLaterality`) acceptable to Alan, or is a different correspondence preferred?
-4. Should the orientation tour auto-start for first-time visitors, or only from About / a rail button? (Auto-start would have to live alongside, or replace, the current About dialog-on-plain-visit behaviour.)
+   - **Open:** asked Alan.
+4. Should the orientation tour auto-start for first-time visitors, or only from About / a rail button?
+   - **Answer (Erik):** Start it from the About dialog; no auto-start.
 5. May lesson text quote the draft at the length used in §2, or should teaching points be paraphrased even more tightly?
+   - **Answer (Erik):** Quoting at that length is fine.
 6. Is chapter 5’s pointer to openEHR/FHIR as the place for “this patient / this encounter / duration” the intended encapsulation story, or should that chapter stay inside Alan’s documentation–statement–observation–situation chain only?
+   - **Open:** question being clarified with Erik.
 7. Should a Clinergy-mapper landing page wait until a mapping effort is actually starting?
+   - **Answer (Erik):** Yes, wait.
 8. Who writes and signs off the final lesson wording — Erik, Alan, or both?
+   - **Answer (Erik):** Erik.
 
 ---
 
