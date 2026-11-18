@@ -1,0 +1,22 @@
+{
+  "id": "sanctions",
+  "chapter": 3,
+  "title": "Sanctions: grammatical, sensible, necessary",
+  "kind": "lesson",
+  "status": "awaiting-author",
+  "pdf": "https://pen-pad-revival.github.io/assets/PEN-PAD-GALEN-GRAIL.pdf",
+  "source": "Rector, PEN&PAD, GALEN & GRAIL, DRAFT Nov 2026, pp. 3–4, §4.1. Not taught in this version.",
+  "todoAlan": [
+    "TODO(alan): Design §11 question 2 is open. The draft says sanctions “were not included in the OpenGrail models as they were considered obsolete for the terminology” (p. 3, §4.1). This browser still shows sensible and grammatical sanctions and topicNecessarily lines for OpenGALEN 8. Do not teach a framing until Alan says which statement the tutorial should lead with.",
+    "TODO(alan): Design §11 question 3 is open. Do not teach these correspondences until Alan confirms them: is_part_of / hasPart → hasStructuralComponent, hasLaterality → hasLeftRightSelector, CirculatorySystem → CardiovascularSystem, necessarily → topicNecessarily."
+  ],
+  "steps": [
+    {
+      "id": "waiting",
+      "title": "Awaiting author review",
+      "body": "This chapter is not taught yet. It is waiting on Alan Rector. The draft says sanctions were left out of the OpenGrail models, while this browser still shows sanction lines. Separately, several names in the draft are not the names in this dump. The lesson will not say which way to present either point until he answers.",
+      "task": "The Sanctions and qualifiers control in the side panel still works. This lesson does not say what those lines mean.",
+      "dump": "Nothing in this step is a claim about how a sanction relates to a definition. That text is blocked on the notes marked TODO(alan) in this file."
+    }
+  ]
+}

@@ -16,7 +16,7 @@
   document.head.appendChild(base);
 })();
 </script>
-<link rel="stylesheet" href="css/app.css?v=15">
+<link rel="stylesheet" href="css/app.css?v=16">
 </head>
 <body>
 <header class="topbar">
@@ -67,6 +67,9 @@
       <button type="button" id="about-btn" aria-label="About and licence" title="About and licence">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="8" r="0.9" fill="currentColor"/></svg>
       </button>
+      <button type="button" id="lessons-btn" aria-pressed="false" aria-label="Lessons" title="Lessons">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h9.5A2.5 2.5 0 0 1 18 7v12.5H8.5A2.5 2.5 0 0 0 6 17V4.5z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 17a2.5 2.5 0 0 1 2.5-2.5H18" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+      </button>
       <button type="button" data-act="children" aria-pressed="true" aria-label="Show children of the focus" title="Show children">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="6" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="18" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.2V11M12 11L6 14.6M12 11l6 3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
@@ -102,6 +105,12 @@
   <p id="about-counts" class="muted"></p>
   <p>The terminology and the derived data are under the <a href="gosl.html">GALEN Open Source License</a>. Unmodified sources are in <a href="https://github.com/erik-sundvalls-bots/opengalen-browser/tree/main/sources">sources/</a>. The browser code is MIT. <a href="https://github.com/erik-sundvalls-bots/opengalen-browser">Repository</a>.</p>
   <p><b>Feedback.</b> <a href="https://github.com/erik-sundvalls-bots/opengalen-browser/issues/new">Suggest improvement/feature</a>.</p>
+  <div class="about-actions">
+    <form method="dialog"><button type="submit" id="about-ok">Continue</button></form>
+    <button type="button" id="tour-start">Start the tour</button>
+  </div>
+  <p class="about-lessons">Lessons, fetched only when opened: <button type="button" data-lesson="layers">Three layers</button> · <button type="button" data-lesson="sanctions">Sanctions (awaiting review)</button> · <button type="button" data-lesson="composition">Composition (awaiting review)</button></p>
+  <p class="about-reset">Progress stays in this browser and is not sent anywhere. <button type="button" id="tutorial-reset">Reset tutorial progress</button></p>
   <h3>Controls</h3>
   <ul>
     <li><b>Generated</b>, <b>Labels</b>, and <b>Clustering</b> are switches beside the search box. Generated and Clustering are on at each start. Clustering off shows every ancestor as its own node. <b>Cluster-marking</b> sits beside Clustering and is on at each start; it is hidden while Clustering is off. Siblings is a button in the side panel, off until you turn it on.</li>
@@ -109,25 +118,25 @@
     <li>Zoom in, zoom out, <b>1:1</b> and fit sit at the upper right of the graph. Drag the background to pan. The wheel pans. Ctrl or ⌘ and the wheel zoom.</li>
     <li>The side panel slides off to the right. The narrow strip keeps icon buttons: show the concept again, open this panel, show or hide the focus concept’s children, show or hide its siblings, ancestors only, definition relationships, and sanctions and qualifiers. The same actions sit at the top of the open panel. The strip remembers whether it was open.</li>
     <li>With a mouse, hover a node for its name without changing focus, and hover a collapsed cluster to read the hidden names. A click refocuses. On a touch screen the first tap is that preview and the second tap on the same node refocuses or expands the cluster. The preview closes if you tap elsewhere, pan or zoom, change focus, tap its close mark, or leave it for a few seconds. While <b>Labels</b> is off, that preview also writes the names onto the node’s immediate parents, children and drawn relationship targets, and lists the same names in the preview, so a covered or crowded dot can still be read.</li>
-    <li>The address of the focused concept is <code>#concept=Name</code>. A <code>?concept=Name</code> query is accepted the same way and is rewritten to that hash. Equivalent names such as <i>Thumb</i> and <i>Pollux</i> are one node, with a heading that lists every name. Opening any of them shows the merged graph; the address keeps the name you opened. When that group appears as a neighbour, it is represented by the canonical name: a short readable name is preferred over a long <i>which</i>-style class, then the member with the most is-a relations, then the shorter official name; ties are broken alphabetically. The dump’s BannedKnowledgeNames bag (ambiguous names such as <i>Tonsil</i> and <i>ZootleWordle</i>) is kept as separate nodes.</li>
-    <li>This About panel opens on a plain visit, with no concept in the hash or query. A URL that already names a concept, such as <code>#concept=Thumb</code>, skips the automatic popup. The About button in the side strip always opens it.</li>
+    <li>The address of the focused concept is <code>#concept=Name</code>. A <code>?concept=Name</code> query is accepted the same way and is rewritten to that hash. An optional lesson can be added as <code>#concept=Name&amp;lesson=id&amp;step=2</code>. Unknown extra fields are ignored, and a plain <code>#concept=Name</code> link is unchanged. Equivalent names such as <i>Thumb</i> and <i>Pollux</i> are one node, with a heading that lists every name. Opening any of them shows the merged graph; the address keeps the name you opened. When that group appears as a neighbour, it is represented by the canonical name: a short readable name is preferred over a long <i>which</i>-style class, then the member with the most is-a relations, then the shorter official name; ties are broken alphabetically. The dump’s BannedKnowledgeNames bag (ambiguous names such as <i>Tonsil</i> and <i>ZootleWordle</i>) is kept as separate nodes.</li>
+    <li>This About panel opens on a plain visit, with no concept in the hash or query. A URL that already names a concept, such as <code>#concept=Thumb</code>, or a lesson, such as <code>#lesson=orientation</code>, skips the automatic popup. The About button in the side strip always opens it. The tour starts only from Start the tour, not by itself.</li>
     <li><b>Relationships</b> are off until you turn the toggle on. They are the roles in the concept’s OWL definition, drawn as dashed arrows in the colour of their property group, pointing at the filler. Is-a links have no arrowheads: ancestors already sit upwards. The side panel lists each role with a checkbox; the first 16 are checked to start with, and All / None plus “shown X of N” let you pick a subset, or all of them, when a concept has many. Ticking a box while the toggle is off turns drawing on. The ticks are kept while you toggle drawing, and are reset when you open another concept. Every selected target is climbed by is-a to the root, and clustering folds the ancestors those targets share. The encircled i beside a heading explains how to read that section. A nested filler such as <i>hasConsequence (X which hasReversibility Reversible)</i> is one edge to X, or to the generated which-class when that class is the filler. The nesting stays in the definition text.</li>
     <li><b>Sanctions and qualifiers</b> work the same way as Relationships: off until you turn the toggle on, not stored in the address, with a scrollable checkbox list, All / None, and “shown X of N”. They are the allowed roles for this concept, drawn as dotted arrows in a single colour, with the same style of arrowhead as Relationships. A sanction says what is allowed; a definition relationship says what this concept has.</li>
     <li><b>Incoming relationships</b> list the concepts whose definitions use the focus as a role filler, for example <i>Thumb hasOrdinalPosition first</i>. Nothing is ticked to start with. Tick a row to add that concept to the graph, with a dashed arrow pointing at the focus. A filter narrows long lists.</li>
     <li><b>Red is-a links</b> are told OWL <code>SubClassOf</code> parents that the published classified dump omitted (mostly the value-type branch, such as <i>first</i> under <i>OrdinalPositionValueType</i>). A banner warns when the open concept has one. See <a href="https://github.com/erik-sundvalls-bots/opengalen-browser/issues/10">issue #10</a>.</li>
     <li><b>Hierarchy: Inferred | Told (original)</b> sits beside the switches. <b>Inferred</b> is the default: the hierarchy GALEN’s own classifier produced. <b>Told (original)</b> shows the parents written in the OWL translation of the GRAIL sources, before any classification: named <code>SubClassOf</code> parents and the named base of each definition (<i>B</i> in <code>A = B which …</code>). Its data (about 230 KB) is fetched only the first time you click it, so the normal start-up is unchanged. In the told view, grey and orange is-a links are also direct classified links, dash-dot blue links are told parents the classifier moved further up (more specific parents in between), and red links are told parents the classified dump does not have above the concept at all. The side panel lists the classifier’s parents for comparison.</li>
   </ul>
-  <form method="dialog"><button type="submit" id="about-ok">Continue</button></form>
 </dialog>
 <div id="info-pop" hidden></div>
 <div id="tip" hidden>
   <button type="button" id="tip-x" aria-label="Close preview" hidden>×</button>
   <div id="tip-body"></div>
 </div>
-<script src="lib/d3.min.js?v=15"></script>
-<script src="lib/d3-dag.min.js?v=15"></script>
-<script src="js/data.js?v=15"></script>
-<script src="js/graph.js?v=15"></script>
-<script src="js/app.js?v=15"></script>
+<script src="lib/d3.min.js?v=16"></script>
+<script src="lib/d3-dag.min.js?v=16"></script>
+<script src="js/data.js?v=16"></script>
+<script src="js/graph.js?v=16"></script>
+<script src="js/hash.js?v=16"></script>
+<script src="js/app.js?v=16"></script>
 </body>
 </html>

@@ -1,0 +1,59 @@
+{
+  "id": "orientation",
+  "chapter": 0,
+  "title": "Orientation",
+  "kind": "tour",
+  "pdf": "https://pen-pad-revival.github.io/assets/PEN-PAD-GALEN-GRAIL.pdf",
+  "source": "Rector, PEN&PAD, GALEN & GRAIL, DRAFT Nov 2026, p. 1.",
+  "steps": [
+    {
+      "id": "search",
+      "title": "Search",
+      "concept": "Thumb",
+      "target": "#q",
+      "body": "The box in the top bar opens a concept by its OpenGALEN name. Thumb is open. The heading joins equivalent names: Thumb = Pollux. One node, both names.",
+      "task": "Type thumb and choose Thumb, or leave the concept this step opened.",
+      "quote": {
+        "text": "Sound, Computable, Human comprehensible – i.e. capable of being presented so as to be understood and used by end users and developers.",
+        "cite": "p. 1, Principle 1"
+      },
+      "note": "The draft’s stated goal was “Useful and Usable systems for health care professionals.” Terminology and concept modelling were “a means to that end.” (p. 1)."
+    },
+    {
+      "id": "graph",
+      "title": "The graph",
+      "concept": "Thumb",
+      "target": "#stage",
+      "switches": { "clustering": true },
+      "actions": { "children": true },
+      "body": "Ancestors sit above the focus and children below. A dashed +n pill is a cluster of intermediate ancestors. Click the pill to expand it. Click a node to make it the focus.",
+      "task": "Click a +n pill, or click a node."
+    },
+    {
+      "id": "panel",
+      "title": "The side panel",
+      "concept": "Thumb",
+      "target": "#panel",
+      "highlight": "#parent-section",
+      "body": "The side panel is the detail for the focus: the definition, parents, children, and the other lists. Thumb and Pollux share this node. The address keeps the name you opened.",
+      "task": "Read the heading and the Parents list. Finger is a parent of this concept."
+    },
+    {
+      "id": "clustering",
+      "title": "Clustering",
+      "concept": "Thumb",
+      "target": "#tog-cluster",
+      "body": "Clustering, beside the search box, folds intermediate ancestors into +n pills. Turn it off and every ancestor is its own node. Children, in the side panel, shows or hides concepts directly under the focus. It starts on.",
+      "task": "Turn Clustering off, then on again."
+    },
+    {
+      "id": "told",
+      "title": "The address, and a red link",
+      "concept": "first",
+      "target": "#told-banner",
+      "highlight": "#parent-section",
+      "body": "The address of this concept is #concept=first. The red is-a link up to OrdinalPositionValueType is a told OWL SubClassOf parent that the published classified dump omitted. This page restores it from the source. It does not run a classifier. The banner points at issue #10. Incoming relationships list concepts whose definitions use first, including Thumb = Pollux with hasOrdinalPosition.",
+      "task": "Look at the red link or the word “told” beside the parent. Then open Incoming relationships in the side panel."
+    }
+  ]
+}

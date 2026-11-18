@@ -1,0 +1,22 @@
+{
+  "id": "composition",
+  "chapter": 4,
+  "title": "Compositional concepts",
+  "kind": "lesson",
+  "status": "awaiting-author",
+  "pdf": "https://pen-pad-revival.github.io/assets/PEN-PAD-GALEN-GRAIL.pdf",
+  "source": "Rector, PEN&PAD, GALEN & GRAIL, DRAFT Nov 2026, pp. 4–5, §5.1. Not taught in this version.",
+  "todoAlan": [
+    "TODO(alan): Design §11 question 3 is open, and this chapter’s walk depends on it. Do not teach the draft’s laterality and part examples against dump names until Alan confirms the correspondences, including hasLaterality → hasLeftRightSelector and the absence of RightLaterality. The dislocation-of-a-right-thumb wording on p. 4 stays untaught for the same reason.",
+    "TODO(alan): A step that only shows an already-named definition, such as Pericarditis, is already in chapter 2. Do not add a second composition story here that quietly assumes the unsettled names."
+  ],
+  "steps": [
+    {
+      "id": "waiting",
+      "title": "Awaiting author review",
+      "body": "This chapter is not taught yet. The draft’s compositional examples use names that are not in this dump, and the correspondences are still with the author. This lesson does not state those correspondences and does not quote the examples as if they were concepts here.",
+      "task": "You can still search and read a definition. The written chapter in this version is Three layers.",
+      "dump": "No name mapping is asserted in this step. See TODO(alan) in this file."
+    }
+  ]
+}

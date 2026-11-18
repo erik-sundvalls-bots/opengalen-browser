@@ -1,0 +1,171 @@
+/* Lesson panel and orientation tour. Loaded only when a lesson is opened. MIT. */
+
+#lesson {
+  width: 320px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--card);
+  border-right: 1px solid var(--line);
+  z-index: 4;
+}
+#lesson[hidden] { display: none !important; }
+.lesson-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.lesson-bar h2 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 18px;
+  line-height: 1.25;
+}
+.lesson-bar button, .lesson-nav button, .tour-nav button {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-weight: 650;
+}
+.lesson-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+}
+#lesson-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px 14px;
+}
+#lesson.is-min #lesson-scroll { display: none; }
+#lesson.is-min { height: auto; }
+.lesson-kicker {
+  margin: 0 0 6px;
+  color: var(--amber);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.lesson-prose { margin: 0 0 8px; line-height: 1.45; }
+.lesson-task {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  background: var(--paper);
+  border-radius: 10px;
+  line-height: 1.4;
+}
+.lesson-task b { color: var(--teal); }
+#lesson-quotes blockquote {
+  margin: 0 0 8px;
+  padding: 0 0 0 10px;
+  border-left: 3px solid var(--amber);
+  color: var(--ink);
+}
+#lesson-quotes p { margin: 0; line-height: 1.4; }
+#lesson-quotes footer, .lesson-dump, .lesson-note, .lesson-save, .lesson-ack {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.lesson-dump { margin: 0 0 8px; }
+.lesson-steps, .lesson-toc {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+}
+.lesson-steps li, .lesson-toc li { margin: 0 0 4px; }
+.lesson-steps button, .lesson-toc button {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 3px 2px;
+  border-radius: 6px;
+  line-height: 1.35;
+}
+.lesson-steps button[aria-current="step"], .lesson-toc button[aria-current="true"] {
+  background: var(--deep);
+  font-weight: 700;
+}
+.lesson-tick { color: var(--teal); font-weight: 700; }
+.lesson-wait { color: var(--amber); font-size: 12px; font-weight: 700; }
+.lesson-nav { display: flex; gap: 8px; margin: 4px 0 12px; }
+.lesson-nav button:disabled { opacity: .45; cursor: default; }
+.lesson-h { margin: 12px 0 4px; font-size: 15px; }
+.lesson-ack { margin-top: 8px; }
+
+#tour[hidden] { display: none !important; }
+#tour-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(28, 36, 48, .45);
+  pointer-events: none;
+}
+#tour-hole {
+  position: fixed;
+  z-index: 40;
+  border-radius: 12px;
+  outline: 2px solid #fffdf8;
+  box-shadow: 0 0 0 3px var(--amber);
+  pointer-events: none;
+}
+#tour-card {
+  position: fixed;
+  z-index: 41;
+  width: 340px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow: auto;
+  padding: 12px 14px;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(28, 36, 48, .2);
+}
+#tour-card h2 { margin: 0 0 6px; font-size: 22px; }
+.tour-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+#tour-next { background: var(--amber); color: white; border-color: transparent; }
+.tutorial-hi {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+body.tutorial-on .og-explain {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  border-bottom: 1px dotted var(--amber);
+  cursor: help;
+}
+body.tutorial-on .told-mark, body.tutorial-on .told-link { cursor: help; }
+body.tutorial-on #g path.told-link { pointer-events: stroke; }
+
+@media (max-width: 960px) {
+  #lesson {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: min(46vh, 360px);
+    border-right: 0;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -8px 24px rgba(28, 36, 48, .12);
+    z-index: 7;
+  }
+  #lesson.is-min { height: auto; }
+}
