@@ -53,7 +53,7 @@
       "target": "#told-banner",
       "highlight": "#parent-section",
       "body": "The address of this concept is #concept=first. The red is-a link up to OrdinalPositionValueType is a told OWL SubClassOf parent that the published classified dump omitted. This page restores it from the source. It does not run a classifier. The banner points at issue #10. Incoming relationships list concepts whose definitions use first, including Thumb = Pollux with hasOrdinalPosition.",
-      "task": "Look at the red link or the word “told” beside the parent. Then open Incoming relationships in the side panel."
+      "task": "Look at the red link or the word “told” beside the parent. Then open Incoming relationships at the bottom of the side panel."
     }
   ]
 }

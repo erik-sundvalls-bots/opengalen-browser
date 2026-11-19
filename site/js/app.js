@@ -1010,19 +1010,15 @@
       p.textContent = "Language note: " + label;
       official.after(p);
     }
-    const relSlot = section("Relationships", "Dashed arrows are definition roles, pointing at the filler. Is-a links have no arrowheads. Tick the items you want on the graph. All and None change the whole list. The first 16 are checked to start with; you can check more, or fewer. The count is how many are checked. The Relationships button turns drawing on or off without forgetting the ticks. A new concept resets the list. Ticking a box while drawing is off turns it on.");
-    relSlot.el.id = "rel-section";
-    relSlot.body.id = "rel-box";
-    relSlot.body.textContent = "Loading definition relationships…";
-    const incSlot = section("Incoming relationships", "Concepts whose OWL definitions use this concept as a role filler, shown as the source concept and the role, for example Thumb hasOrdinalPosition first. Nothing is ticked to start with, because some concepts are used by thousands of definitions. Tick a row to add that concept and a dashed arrow pointing at this concept to the graph. The filter narrows the list; at most " + INC_LIST_MAX + " rows are listed at once, and All ticks the rows that are listed. The count is how many are ticked. A new concept resets the list.");
-    incSlot.el.id = "inc-section";
-    incSlot.body.id = "inc-box";
-    incSlot.body.textContent = "Loading incoming relationships…";
-    if (focusIncs.length && state.focus === id) paintIncSection();
     const defSlot = section("Definition");
     defSlot.el.id = "def-section";
     defSlot.body.id = "def-text";
     defSlot.body.textContent = "Loading the definition…";
+    makeDefinitionToggle(defSlot);
+    const relSlot = section("Relationships", "Dashed arrows are definition roles, pointing at the filler. Is-a links have no arrowheads. Tick the items you want on the graph. All and None change the whole list. The first 16 are checked to start with; you can check more, or fewer. The count is how many are checked. The Relationships button turns drawing on or off without forgetting the ticks. A new concept resets the list. Ticking a box while drawing is off turns it on.");
+    relSlot.el.id = "rel-section";
+    relSlot.body.id = "rel-box";
+    relSlot.body.textContent = "Loading definition relationships…";
     const qualSlot = section("Sanctions and qualifiers", "Dotted arrows are sanctions and qualifiers: a role that is allowed for this concept, not a definition link. They use one colour, distinct from is-a and from the dashed definition-role arrows. Tick the items you want on the graph, as with Relationships. The first 16 are checked to start with; you can check more, or fewer. The Sanctions and qualifiers button turns drawing on or off without forgetting the ticks. A new concept resets the list. Ticking a box while drawing is off turns it on.");
     qualSlot.el.id = "qual-section";
     const rubricSlot = section("Dissection rubric");
@@ -1121,6 +1117,12 @@
       namesSlot.body.append(list);
     }
 
+    const incSlot = section("Incoming relationships", "Concepts whose OWL definitions use this concept as a role filler, shown as the source concept and the role, for example Thumb hasOrdinalPosition first. Nothing is ticked to start with, because some concepts are used by thousands of definitions. Tick a row to add that concept and a dashed arrow pointing at this concept to the graph. The filter narrows the list; at most " + INC_LIST_MAX + " rows are listed at once, and All ticks the rows that are listed. The count is how many are ticked. A new concept resets the list.");
+    incSlot.el.id = "inc-section";
+    incSlot.body.id = "inc-box";
+    incSlot.body.textContent = "Loading incoming relationships…";
+    if (focusIncs.length && state.focus === id) paintIncSection();
+
     Promise.all(members.map((mid) => OG.loadRecord(model, mid))).then((recs) => {
       if (token !== panelToken) return;
       const rec = mergeRecords(members, recs, g);
@@ -1183,6 +1185,7 @@
         paintColored(pre, rec.g);
         grailSlot.body.append(pre);
       }
+      panel.appendChild(incSlot.el);
       document.dispatchEvent(new CustomEvent("og-panel"));
       if (rec && rec.l && rec.l !== title.textContent && rec.l !== (model.labels[String(id)] || "")) {
         const p = document.createElement("p");
@@ -1195,6 +1198,40 @@
       defSlot.body.textContent = "The definition shard could not be loaded.";
       document.dispatchEvent(new CustomEvent("og-panel"));
     });
+  }
+
+  function definitionExpanded() {
+    try { return localStorage.getItem("og-definition") !== "collapsed"; }
+    catch (err) { return true; }
+  }
+
+  function setDefinitionOpen(open) {
+    const body = document.getElementById("def-text");
+    const toggle = document.getElementById("def-toggle");
+    if (body) body.hidden = !open;
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      toggle.title = open ? "Collapse definition" : "Expand definition";
+    }
+    try { localStorage.setItem("og-definition", open ? "open" : "collapsed"); }
+    catch (err) { /* private mode */ }
+  }
+
+  function makeDefinitionToggle(slot) {
+    const heading = slot.el.querySelector("h3");
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.id = "def-toggle";
+    toggle.className = "def-toggle";
+    toggle.setAttribute("aria-controls", "def-text");
+    const chevron = document.createElement("span");
+    chevron.className = "def-chevron";
+    chevron.setAttribute("aria-hidden", "true");
+    toggle.append(chevron, document.createTextNode("Definition"));
+    heading.textContent = "";
+    heading.append(toggle);
+    toggle.addEventListener("click", () => setDefinitionOpen(toggle.getAttribute("aria-expanded") !== "true"));
+    setDefinitionOpen(definitionExpanded());
   }
 
   function section(heading, info) {
@@ -1447,7 +1484,7 @@
     resizeTimer = setTimeout(() => { if (model) draw(); }, 150);
   });
 
-  const ASSET = "18";
+  const ASSET = "19";
   const readyWaiters = [];
   function setSwitch(key, on) {
     if (!model || !Object.prototype.hasOwnProperty.call(state, key)) return;

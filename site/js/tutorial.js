@@ -2,7 +2,7 @@
    Progress is stored in localStorage under og-tutorial and is not sent anywhere. */
 (function () {
   const OG = (window.OG = window.OG || {});
-  const ASSET = "18";
+  const ASSET = "19";
   const STORE = "og-tutorial";
   const PDF = "https://pen-pad-revival.github.io/assets/PEN-PAD-GALEN-GRAIL.pdf";
   const ACK = "This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org).";
@@ -275,6 +275,10 @@
     const el = document.querySelector(selector);
     if (!el) return;
     el.classList.add("tutorial-hi");
+    if (selector === "#def-section") {
+      const toggle = document.getElementById("def-toggle");
+      if (toggle && toggle.getAttribute("aria-expanded") === "false") toggle.click();
+    }
     if (el.closest && el.closest("#panel") && host()) host().openPanel();
     try { el.scrollIntoView({ block: "nearest" }); } catch (err) { /* ignore */ }
   }
