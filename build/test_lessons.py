@@ -194,7 +194,7 @@ class LessonTests(unittest.TestCase):
         self.assertNotIn("tutorial.js", html)
         self.assertNotIn("tutorial.css", html)
         self.assertNotIn("lessons/", html)
-        self.assertIn("js/hash.js?v=18", html)
+        self.assertIn("js/hash.js?v=19", html)
         self.assertIn('id="tutorial-open"', html)
         app = (SITE / "js" / "app.js").read_text(encoding="utf-8")
         self.assertEqual(app.count("js/tutorial.js"), 1)

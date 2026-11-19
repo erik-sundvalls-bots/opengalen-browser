@@ -298,6 +298,30 @@ h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; white-space: nowrap; }
 #info-pop[hidden] { display: none; }
 .kicker { margin: 0 0 6px; color: var(--amber); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .official { margin: 0; color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
+.def-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.def-chevron {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent currentColor;
+  flex: none;
+}
+.def-toggle[aria-expanded="true"] .def-chevron { transform: rotate(90deg); }
+#def-text[hidden] { display: none; }
 .def {
   margin: 0;
   padding: 10px 12px;
