@@ -1447,7 +1447,7 @@
     resizeTimer = setTimeout(() => { if (model) draw(); }, 150);
   });
 
-  const ASSET = "16";
+  const ASSET = "18";
   const readyWaiters = [];
   function setSwitch(key, on) {
     if (!model || !Object.prototype.hasOwnProperty.call(state, key)) return;
@@ -1520,10 +1520,13 @@
   document.querySelectorAll("[data-lesson]").forEach((button) => {
     button.addEventListener("click", () => startLesson(button.dataset.lesson, 1));
   });
-  const lessonsBtn = document.getElementById("lessons-btn");
-  if (lessonsBtn) lessonsBtn.addEventListener("click", () => {
+  function openTutorialList() {
     ensureTutorial().then((api) => api.openToc()).catch((err) => setStatus(err.message || String(err)));
-  });
+  }
+  const lessonsBtn = document.getElementById("lessons-btn");
+  if (lessonsBtn) lessonsBtn.addEventListener("click", openTutorialList);
+  const tutorialOpen = document.getElementById("tutorial-open");
+  if (tutorialOpen) tutorialOpen.addEventListener("click", openTutorialList);
   const tutorialReset = document.getElementById("tutorial-reset");
   if (tutorialReset) tutorialReset.addEventListener("click", () => {
     ensureTutorial().then((api) => api.resetProgress()).catch((err) => setStatus(err.message || String(err)));

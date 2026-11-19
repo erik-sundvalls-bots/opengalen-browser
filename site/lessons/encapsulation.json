@@ -1,0 +1,52 @@
+{
+  "id": "encapsulation",
+  "chapter": 5,
+  "title": "Where the terminology ends",
+  "kind": "lesson",
+  "pdf": "https://pen-pad-revival.github.io/assets/PEN-PAD-GALEN-GRAIL.pdf",
+  "source": "Rector, PEN&PAD, GALEN & GRAIL, DRAFT Nov 2026, pp. 1 and 4–5, §5.2. The aside is not the draft; it is pending Erik.",
+  "todoErik": [
+    "TODO(erik): Question 6 is still open. The aside on the chain step says information models such as openEHR or FHIR are where this patient, this encounter, duration, and certainty are commonly recorded today. Keep that aside or delete it. The main text stays inside the draft’s documentation–statement–observation–situation chain."
+  ],
+  "steps": [
+    {
+      "id": "fingerpain",
+      "title": "A named clinical phenomenon",
+      "concept": "FingerPain",
+      "concepts": ["Finger"],
+      "properties": ["actsOn", "isConsequenceOf", "isDisplacementFrom"],
+      "highlight": "#def-section",
+      "body": "FingerPain is a class in the terminology. The definition ties a sensation to a finger. It does not say that a particular person has this pain, who recorded it, when, or how sure they were. Those are not lines in the definition.",
+      "task": "Read the definition and notice what it does not contain: no person, no encounter, no duration, no degree of certainty.",
+      "dump": "In this dump the definition is “ExternalStimulusSensation which actsOn (PainSignal which isConsequenceOf (NerveConduction which hasUniqueAssociatedDisplacement (Displacement which isDisplacementFrom Finger)))”."
+    },
+    {
+      "id": "chain",
+      "title": "Documentation, statement, observation, situation",
+      "concept": "FingerPain",
+      "highlight": "#def-section",
+      "body": "The draft’s chain for a record entry is documentation of statements of observations of patient situations. To a first approximation, documentation and the statement (by whom, and so on) belong in the record. Observation and patient situation belong in the terminology, on a core ontology. FingerPain sits on the terminology side of that line: a kind of observation, not the documentation of one event. During the project the ontology stayed almost entirely in pathophysiology, which is why a sensation-and-finger class is here and a chart entry is not.",
+      "task": "Keep the definition in view while you read the chain. The dashed aside under the teaching point is not the draft, and it is not signed off.",
+      "quotes": [
+        {
+          "text": "The medical record consists of statements about what carers have heard, seen, thought and done.",
+          "cite": "p. 1, Principle 1"
+        },
+        {
+          "text": "Documentation of Statements of Observations of Patient Situations.",
+          "cite": "p. 4, §5.2"
+        },
+        {
+          "text": "To a first approximation, Documentation (whether recorded, etc) and Statement (by whom, etc) belong in the EHR and Observation and Patient Situation in the terminology based on a core ontology.",
+          "cite": "p. 5, §5.2"
+        },
+        {
+          "text": "During GALEN and PEN&PAD, the ontology was confined almost entirely to a core of pathophysiology.",
+          "cite": "p. 4, §5.2"
+        }
+      ],
+      "aside": "Aside, pending Erik’s sign-off. TODO(erik): Information models such as openEHR or FHIR are where “this patient”, “this encounter”, duration, and certainty are commonly recorded today. That sentence is not in the draft. Question 6, whether this chapter should point at those models or stay only inside the documentation–statement–observation–situation chain, is still open. The paragraphs above stay inside the chain.",
+      "dump": "In this dump, nothing in FingerPain’s definition names a patient, an encounter, a duration, or a certainty."
+    }
+  ]
+}

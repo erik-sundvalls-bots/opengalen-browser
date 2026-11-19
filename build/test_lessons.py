@@ -36,6 +36,23 @@ DRAFT_QUOTES = [
     "a means to that end",
     "GRAIL writes the hierarchy backwards from OWL, A newSub B rather than B subClassOf A",
     "newSub was convenient check on spelling errors",
+    "The original goal of GRAIL was to specify “all and only what it was sensible to say”",
+    "Sanctions had two levels: grammatical and sensible",
+    "No concept could be defined by an expression unless that expression was a specialisation of a sensible sanction.",
+    "Sensibly: Finger is_part_of some Hand",
+    "Necessarily: Thumb is_part_of some Hand",
+    "(Note: sanctions were not included in the OpenGrail models as they were considered obsolete for the terminology)",
+    "In practice for convenience, keywords to combine levels were provided, e.g. GrammaticallyAnd Sensibly",
+    "The use of “necessarily” in the keywords reflect an attempt to make clear to authors the commitment an Logical/Ontological layer separate from the “sanctions” and “extrinsics”.",
+    "(Dislocation that hasLocation some (Thumb that hasLaterality some RightLaterality)",
+    "Sensibly: Digit hasLaterality some Laterality",
+    "to apply a code to a patient situation is to say that that situation is a member of the corresponding class.",
+    "Producing class/concepts/terms for every possible patient situation is impossible.",
+    "neither the code nor the class was made a permanent part of the model because the model would rapidly have become too large to manage.",
+    "The medical record consists of statements about what carers have heard, seen, thought and done.",
+    "Documentation of Statements of Observations of Patient Situations.",
+    "To a first approximation, Documentation (whether recorded, etc) and Statement (by whom, etc) belong in the EHR and Observation and Patient Situation in the terminology based on a core ontology.",
+    "During GALEN and PEN&PAD, the ontology was confined almost entirely to a core of pathophysiology.",
 ]
 
 # Name correspondences that are still with Alan. Not taught in the written chapters.
@@ -81,16 +98,27 @@ def load_names():
     return {blob[name_off[i] : name_off[i + 1]].decode() for i in range(n)}
 
 
-def walk_concepts(obj, found):
+def walk_named(obj, concepts, properties):
     if isinstance(obj, dict):
         for key, value in obj.items():
-            if key == "concept" and isinstance(value, str) and value.strip():
-                found.append(value.strip())
+            if key in ("concept", "concepts") and isinstance(value, str) and value.strip():
+                concepts.append(value.strip())
+            elif key == "concepts" and isinstance(value, list):
+                concepts.extend(item.strip() for item in value if isinstance(item, str) and item.strip())
+            elif key in ("property", "properties") and isinstance(value, str) and value.strip():
+                properties.append(value.strip())
+            elif key == "properties" and isinstance(value, list):
+                properties.extend(item.strip() for item in value if isinstance(item, str) and item.strip())
             else:
-                walk_concepts(value, found)
+                walk_named(value, concepts, properties)
     elif isinstance(obj, list):
         for item in obj:
-            walk_concepts(item, found)
+            walk_named(item, concepts, properties)
+
+
+def load_properties():
+    props = json.loads(gzip.decompress((DATA / "props.json.gz").read_bytes()))
+    return {item["n"] for item in props["props"]}
 
 
 class LessonTests(unittest.TestCase):
@@ -103,23 +131,38 @@ class LessonTests(unittest.TestCase):
         ids = {path.name for path in self.files}
         self.assertEqual(
             ids,
-            {"index.json", "orientation.json", "layers.json", "sanctions.json", "composition.json"},
+            {
+                "index.json",
+                "orientation.json",
+                "layers.json",
+                "sanctions.json",
+                "composition.json",
+                "encapsulation.json",
+            },
         )
 
-    def test_every_concept_is_in_the_graph(self):
-        found = []
+    def test_every_concept_and_property_is_in_the_data(self):
+        concepts = []
+        properties = []
         for path in self.files:
-            walk_concepts(json.loads(path.read_text(encoding="utf-8")), found)
-        self.assertIn("Thumb", found)
-        self.assertIn("first", found)
-        self.assertIn("Pericarditis", found)
-        self.assertIn("Bird", found)
-        self.assertIn("GramPositiveBacterium", found)
-        self.assertIn("Gorilla", found)
-        missing = sorted({name for name in found if name not in self.names})
-        self.assertEqual(missing, [])
+            walk_named(json.loads(path.read_text(encoding="utf-8")), concepts, properties)
+        self.assertIn("Thumb", concepts)
+        self.assertIn("Hand", concepts)
+        self.assertIn("Cell", concepts)
+        self.assertIn("ChestPainRadiatingToLeftArm", concepts)
+        self.assertIn("FingerPain", concepts)
+        self.assertIn("hasStructuralComponent", properties)
+        self.assertIn("hasLeftRightSelector", properties)
+        self.assertIn("isFunctionalComponentOf", properties)
+        missing_concepts = sorted({name for name in concepts if name not in self.names})
+        missing_properties = sorted({name for name in properties if name not in load_properties()})
+        self.assertEqual(missing_concepts, [])
+        self.assertEqual(missing_properties, [])
         self.assertNotIn("Paris", self.names)
         self.assertNotIn("France", self.names)
+        self.assertNotIn("RightLaterality", self.names)
+        self.assertNotIn("Dislocation", self.names)
+        self.assertNotIn("hasLaterality", load_properties())
 
     def test_written_chapters_do_not_teach_unsettled_mappings(self):
         for name in ("orientation.json", "layers.json"):
@@ -127,14 +170,18 @@ class LessonTests(unittest.TestCase):
             for token in UNSETTLED:
                 self.assertNotIn(token, text, name)
 
-    def test_placeholders_mark_alans_open_questions(self):
-        for name in ("sanctions.json", "composition.json"):
-            text = (LESSONS / name).read_text(encoding="utf-8")
-            self.assertIn("TODO(alan)", text)
-            self.assertIn("awaiting-author", text)
-            doc = json.loads(text)
-            self.assertTrue(doc["todoAlan"])
-            self.assertTrue(all("TODO(alan)" in line for line in doc["todoAlan"]))
+    def test_author_notes(self):
+        for path in self.files:
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn("TODO(alan)", text)
+            self.assertNotIn("awaiting-author", text)
+        encapsulation = (LESSONS / "encapsulation.json").read_text(encoding="utf-8")
+        self.assertIn("TODO(erik)", encapsulation)
+        doc = json.loads(encapsulation)
+        self.assertTrue(doc["todoErik"])
+        self.assertTrue(all("TODO(erik)" in line for line in doc["todoErik"]))
+        self.assertIn("openEHR", doc["steps"][1]["aside"])
+        self.assertNotIn("openEHR", doc["steps"][1]["body"])
 
     def test_draft_quotes_are_exact_and_present(self):
         blob = "\n".join(path.read_text(encoding="utf-8") for path in self.files)
@@ -147,7 +194,8 @@ class LessonTests(unittest.TestCase):
         self.assertNotIn("tutorial.js", html)
         self.assertNotIn("tutorial.css", html)
         self.assertNotIn("lessons/", html)
-        self.assertIn("js/hash.js?v=16", html)
+        self.assertIn("js/hash.js?v=18", html)
+        self.assertIn('id="tutorial-open"', html)
         app = (SITE / "js" / "app.js").read_text(encoding="utf-8")
         self.assertEqual(app.count("js/tutorial.js"), 1)
         self.assertEqual(app.count("css/tutorial.css"), 1)

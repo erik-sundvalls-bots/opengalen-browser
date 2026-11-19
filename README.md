@@ -34,7 +34,7 @@ Acknowledgement, as GOSL requires at start-up and within the application:
 - Switches beside the search box for generated classes (on at start), labels, and clustering. Cluster-marking appears while clustering is on. Siblings is a side-panel button. Zoom and fit sit at the upper right of the graph. Click an expanded cluster’s area, not a node, to collapse it. With cluster-marking off that area is invisible.
 - Hide the long generated `…which…which…` class names, or show them. They are shown at start.
 - Permalink a concept with `#concept=Name` (a `?concept=Name` query is accepted and rewritten to that hash). For an equivalence group the permalink may use any of the names. A lesson can share that address: `#concept=Pericarditis&lesson=layers&step=1`. Unknown extra fields are ignored, and a plain `#concept=Name` link is unchanged.
-- The About and licence dialog opens automatically only on a plain visit, with no concept and no lesson in the address. A URL that already names a concept, such as `#concept=Thumb`, or a lesson, such as `#lesson=orientation`, goes straight to the graph. The About button in the side strip still opens the dialog. **Start the tour** is in that dialog. It does not start by itself.
+- The About and licence dialog opens automatically only on a plain visit, with no concept and no lesson in the address. A URL that already names a concept, such as `#concept=Thumb`, or a lesson, such as `#lesson=orientation`, goes straight to the graph. The About button in the side strip still opens the dialog. **Tutorial** in the top bar opens the chapter list. **Start the tour** in About starts chapter 0. Neither starts by itself.
 - A short tutorial (orientation tour, and a chapter on meaning, background knowledge, and data) loads only when you open it. Progress stays in this browser’s `localStorage` and is not sent anywhere. See [Tutorial](#tutorial).
 - Repeat visits are cached in IndexedDB, including offline reuse of what has already been fetched.
 - **Hierarchy: Inferred | Told (original)** beside the switches. *Inferred* (the default) is the classified dump. *Told* shows the parents stated in the OWL translation of the GRAIL sources, before any classification. Its data is fetched only on the first click (about 240 KB), so the normal start-up is unchanged. See [Told hierarchy variant](#told-hierarchy-variant).
@@ -151,10 +151,12 @@ The first view fetches the graph, the search index, the labels and `meta.json`: 
 
 The browser includes the start of an interactive reading of Alan Rector’s draft *PEN&PAD, GALEN & GRAIL* (November 2026). The design is [docs/TUTORIAL-DESIGN.md](docs/TUTORIAL-DESIGN.md). Lesson files live in `site/lessons/` and are fetched with `site/js/tutorial.js` and `site/css/tutorial.css` the first time you open a lesson, not with the initial page.
 
-- **Start the tour** in About walks search, the graph, the side panel, clustering, and the red told-parent link on `#concept=first`.
-- **Three layers** opens `Pericarditis`, `Bird`, `GramPositiveBacterium`, and `Gorilla`, with short quotations and page numbers from the draft. Patient data is described as out of scope for this graph.
-- **Sanctions** and **Composition** are placeholders. They wait on Alan Rector for two open questions: how to frame sanctions, given the draft says they were omitted from the OpenGrail models, and whether the draft’s property names correspond to the names in this dump. Those notes are marked `TODO(alan)` in the lesson files. Chapter 5 is not built.
-- The book icon on the side strip opens the chapter list. **Reset tutorial progress** is in About.
+- **Tour of the screen (chapter 0)** walks search, the graph, the side panel, clustering, and the red told-parent link on `#concept=first`. Start it from About, or pick it in the Tutorial list.
+- **Three layers** opens `Pericarditis`, `Bird`, `GramPositiveBacterium`, and `Gorilla`, with short quotations and page numbers from the draft.
+- **Sanctions** opens `Hand`, `Cell`, `Digit`, and `Thumb`. Sensible, grammatical, and `topicNecessarily` lines use the OpenGALEN 8 names. The draft’s generic labels are quoted and mapped. In the OWL files those sanctions are annotation assertions, not class axioms; Alan Rector’s November 2026 note to Erik says the draft should have called them comments in the OWL version, not guaranteed complete.
+- **Composition** walks `InflammationLesion`, `Pericarditis`, `Thumb`, and `ChestPainRadiatingToLeftArm`, and says this page cannot classify a new expression.
+- **Where the terminology ends** uses `FingerPain` and the draft’s documentation–statement–observation–situation chain. An aside marked `TODO(erik)` mentions openEHR and FHIR; Erik has not signed that aside off.
+- **Tutorial** in the top bar, and the book icon on the side strip, open the chapter list. **Reset tutorial progress** is in About.
 
 Quotations were checked against the draft PDF. They are not a copy of the paper.
 

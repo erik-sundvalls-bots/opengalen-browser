@@ -77,6 +77,14 @@
   font-size: 12px;
   line-height: 1.4;
 }
+.lesson-aside {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px dashed var(--amber);
+  border-radius: 10px;
+  background: #fff8ee;
+  line-height: 1.45;
+}
 .lesson-dump { margin: 0 0 8px; }
 .lesson-steps, .lesson-toc {
   list-style: none;
@@ -99,8 +107,9 @@
 }
 .lesson-tick { color: var(--teal); font-weight: 700; }
 .lesson-wait { color: var(--amber); font-size: 12px; font-weight: 700; }
-.lesson-nav { display: flex; gap: 8px; margin: 4px 0 12px; }
+.lesson-nav { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; }
 .lesson-nav button:disabled { opacity: .45; cursor: default; }
+#lesson-next { margin-left: auto; }
 .lesson-h { margin: 12px 0 4px; font-size: 15px; }
 .lesson-ack { margin-top: 8px; }
 
@@ -135,8 +144,9 @@
   box-shadow: 0 12px 36px rgba(28, 36, 48, .2);
 }
 #tour-card h2 { margin: 0 0 6px; font-size: 22px; }
-.tour-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-#tour-next { background: var(--amber); color: white; border-color: transparent; }
+.tour-nav { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+#tour-next, #tour-continue { margin-left: auto; background: var(--amber); color: white; border-color: transparent; }
+#tour-back[hidden], #lesson-back[hidden], #tour-step[hidden], #tour-end[hidden] { display: none; }
 .tutorial-hi {
   outline: 2px solid var(--amber);
   outline-offset: 3px;
@@ -168,4 +178,11 @@ body.tutorial-on #g path.told-link { pointer-events: stroke; }
     z-index: 7;
   }
   #lesson.is-min { height: auto; }
+  #lesson.dock-top {
+    top: 8px;
+    bottom: auto;
+    border-top: 1px solid var(--line);
+    border-bottom: 0;
+    box-shadow: 0 8px 24px rgba(28, 36, 48, .12);
+  }
 }

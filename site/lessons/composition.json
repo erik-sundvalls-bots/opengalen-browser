@@ -3,20 +3,83 @@
   "chapter": 4,
   "title": "Compositional concepts",
   "kind": "lesson",
-  "status": "awaiting-author",
   "pdf": "https://pen-pad-revival.github.io/assets/PEN-PAD-GALEN-GRAIL.pdf",
-  "source": "Rector, PEN&PAD, GALEN & GRAIL, DRAFT Nov 2026, pp. 4–5, §5.1. Not taught in this version.",
-  "todoAlan": [
-    "TODO(alan): Design §11 question 3 is open, and this chapter’s walk depends on it. Do not teach the draft’s laterality and part examples against dump names until Alan confirms the correspondences, including hasLaterality → hasLeftRightSelector and the absence of RightLaterality. The dislocation-of-a-right-thumb wording on p. 4 stays untaught for the same reason.",
-    "TODO(alan): A step that only shows an already-named definition, such as Pericarditis, is already in chapter 2. Do not add a second composition story here that quietly assumes the unsettled names."
-  ],
+  "source": "Rector, PEN&PAD, GALEN & GRAIL, DRAFT Nov 2026, pp. 3–4, §4.1 and §5.1.",
   "steps": [
     {
-      "id": "waiting",
-      "title": "Awaiting author review",
-      "body": "This chapter is not taught yet. The draft’s compositional examples use names that are not in this dump, and the correspondences are still with the author. This lesson does not state those correspondences and does not quote the examples as if they were concepts here.",
-      "task": "You can still search and read a definition. The written chapter in this version is Three layers.",
-      "dump": "No name mapping is asserted in this step. See TODO(alan) in this file."
+      "id": "lesion",
+      "title": "A lesion is already a composition",
+      "concept": "InflammationLesion",
+      "concepts": ["PathologicalBodyStructure", "InflammationProcess", "InflammatoryLesion"],
+      "properties": ["hasUniqueAssociatedProcess"],
+      "highlight": "#def-section",
+      "body": "Many OpenGALEN names are compositions that were written out and given a name. InflammationLesion is one: a pathological structure tied to an inflammation process. The next step uses that name inside another definition.",
+      "task": "Read the definition.",
+      "dump": "In this dump the definition is “PathologicalBodyStructure which hasUniqueAssociatedProcess InflammationProcess”. InflammationLesion is the same concept as InflammatoryLesion."
+    },
+    {
+      "id": "pericarditis",
+      "title": "Pericarditis names one composition",
+      "concept": "Pericarditis",
+      "concepts": ["InflammationLesion", "Pericardium"],
+      "properties": ["hasSpecificLocation"],
+      "highlight": "#def-section",
+      "body": "Pericarditis is not a further primitive. Its definition takes InflammationLesion and locates it in the pericardium. The draft’s shorter wording, “Inflammation of the Pericardium”, is the same example under generic labels. Those shorter words are not the concept names here.",
+      "task": "Read the definition, then follow hasSpecificLocation to Pericardium if you want the part.",
+      "quote": {
+        "text": "Definitions – Pericarditis = Inflammation of the Pericardium",
+        "cite": "p. 1, §2.1.1"
+      },
+      "dump": "In this dump the definition is “InflammationLesion which hasSpecificLocation Pericardium”."
+    },
+    {
+      "id": "thumb",
+      "title": "Thumb names another",
+      "concept": "Thumb",
+      "concepts": ["Pollux", "Finger", "first"],
+      "properties": ["hasOrdinalPosition"],
+      "highlight": "#def-section",
+      "body": "Thumb, also named Pollux, is the composition of Finger with the ordinal value first. The previous chapter’s sanction on Digit is what made that role sensible to use. This step is only the named result.",
+      "task": "Read the definition.",
+      "dump": "In this dump the definition is “Finger which hasOrdinalPosition first”."
+    },
+    {
+      "id": "laterality",
+      "title": "A nested laterality, and the draft’s thumb",
+      "concept": "ChestPainRadiatingToLeftArm",
+      "concepts": ["ChestPain", "Arm", "leftSelection", "rightSelection", "JointDislocation", "DislocationLesion", "Joint"],
+      "properties": ["hasLeftRightSelector", "hasSpecificLocation", "hasLocation"],
+      "highlight": "#def-section",
+      "body": "The draft’s dislocation of a right thumb is written with generic labels. No concept has that wording. RightLaterality is not a concept, and Dislocation is not a concept. What this dump does have is a named, nested laterality, and a named dislocation of a joint.",
+      "task": "Read the definition of the concept on screen. The nested selector is hasLeftRightSelector leftSelection.",
+      "quote": {
+        "text": "(Dislocation that hasLocation some (Thumb that hasLaterality some RightLaterality)",
+        "cite": "p. 4, §4.1"
+      },
+      "dump": "In this dump, ChestPainRadiatingToLeftArm is “ChestPain which isActedOnBy (PainRadiation which hasUniqueAssociatedDisplacement (Displacement which isDisplacementTo (Arm which hasLeftRightSelector leftSelection)))”. JointDislocation is “DislocationLesion which hasSpecificLocation Joint”. hasLocation is a property name here; this dislocation definition uses hasSpecificLocation. hasLaterality is not a property name; hasLeftRightSelector is. rightSelection exists, and this named pain uses leftSelection. The draft’s labels are the generic ones Alan Rector said came from more general papers (November 2026, personal communication to Erik)."
+    },
+    {
+      "id": "postcoordination",
+      "title": "Post-coordination was dynamic",
+      "concepts": ["ChestPainRadiatingToLeftArm"],
+      "highlight": "#stage",
+      "body": "Applying a code to a patient situation, in the draft’s account, says that the situation is a member of a class. There cannot be a permanent class for every situation. GALEN’s approach was to build a post-coordinated class at the time of recording, classify it, and not keep that class in the model. This page has no classifier. It can show a composition only when the composition was already given a name, as with the concept still open from the previous step.",
+      "task": "Nothing to compose. There is no box here that classifies a new expression.",
+      "quotes": [
+        {
+          "text": "to apply a code to a patient situation is to say that that situation is a member of the corresponding class.",
+          "cite": "p. 4, §5.1"
+        },
+        {
+          "text": "Producing class/concepts/terms for every possible patient situation is impossible.",
+          "cite": "p. 4, §5.1"
+        },
+        {
+          "text": "neither the code nor the class was made a permanent part of the model because the model would rapidly have become too large to manage.",
+          "cite": "p. 4, §5.1"
+        }
+      ],
+      "dump": "In this dump the named compositions above are ordinary concepts. A new expression that is not already a name cannot be classified on this page."
     }
   ]
 }

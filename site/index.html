@@ -16,11 +16,12 @@
   document.head.appendChild(base);
 })();
 </script>
-<link rel="stylesheet" href="css/app.css?v=16">
+<link rel="stylesheet" href="css/app.css?v=18">
 </head>
 <body>
 <header class="topbar">
   <h1>OpenGALEN 8</h1>
+  <button type="button" id="tutorial-open">Tutorial</button>
   <label class="search">
     <span class="vh">Search concepts</span>
     <input id="q" type="search" placeholder="Search concepts, for example heart, anaemia, asthma" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="suggest" aria-autocomplete="list">
@@ -67,7 +68,7 @@
       <button type="button" id="about-btn" aria-label="About and licence" title="About and licence">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="8" r="0.9" fill="currentColor"/></svg>
       </button>
-      <button type="button" id="lessons-btn" aria-pressed="false" aria-label="Lessons" title="Lessons">
+      <button type="button" id="lessons-btn" aria-pressed="false" aria-label="Tutorial" title="Tutorial">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h9.5A2.5 2.5 0 0 1 18 7v12.5H8.5A2.5 2.5 0 0 0 6 17V4.5z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 17a2.5 2.5 0 0 1 2.5-2.5H18" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
       </button>
       <button type="button" data-act="children" aria-pressed="true" aria-label="Show children of the focus" title="Show children">
@@ -109,7 +110,7 @@
     <form method="dialog"><button type="submit" id="about-ok">Continue</button></form>
     <button type="button" id="tour-start">Start the tour</button>
   </div>
-  <p class="about-lessons">Lessons, fetched only when opened: <button type="button" data-lesson="layers">Three layers</button> · <button type="button" data-lesson="sanctions">Sanctions (awaiting review)</button> · <button type="button" data-lesson="composition">Composition (awaiting review)</button></p>
+  <p class="about-lessons">Lessons, fetched only when opened: <button type="button" data-lesson="layers">Three layers</button> · <button type="button" data-lesson="sanctions">Sanctions</button> · <button type="button" data-lesson="composition">Composition</button> · <button type="button" data-lesson="encapsulation">Terminology and the record</button></p>
   <p class="about-reset">Progress stays in this browser and is not sent anywhere. <button type="button" id="tutorial-reset">Reset tutorial progress</button></p>
   <h3>Controls</h3>
   <ul>
@@ -119,7 +120,7 @@
     <li>The side panel slides off to the right. The narrow strip keeps icon buttons: show the concept again, open this panel, show or hide the focus concept’s children, show or hide its siblings, ancestors only, definition relationships, and sanctions and qualifiers. The same actions sit at the top of the open panel. The strip remembers whether it was open.</li>
     <li>With a mouse, hover a node for its name without changing focus, and hover a collapsed cluster to read the hidden names. A click refocuses. On a touch screen the first tap is that preview and the second tap on the same node refocuses or expands the cluster. The preview closes if you tap elsewhere, pan or zoom, change focus, tap its close mark, or leave it for a few seconds. While <b>Labels</b> is off, that preview also writes the names onto the node’s immediate parents, children and drawn relationship targets, and lists the same names in the preview, so a covered or crowded dot can still be read.</li>
     <li>The address of the focused concept is <code>#concept=Name</code>. A <code>?concept=Name</code> query is accepted the same way and is rewritten to that hash. An optional lesson can be added as <code>#concept=Name&amp;lesson=id&amp;step=2</code>. Unknown extra fields are ignored, and a plain <code>#concept=Name</code> link is unchanged. Equivalent names such as <i>Thumb</i> and <i>Pollux</i> are one node, with a heading that lists every name. Opening any of them shows the merged graph; the address keeps the name you opened. When that group appears as a neighbour, it is represented by the canonical name: a short readable name is preferred over a long <i>which</i>-style class, then the member with the most is-a relations, then the shorter official name; ties are broken alphabetically. The dump’s BannedKnowledgeNames bag (ambiguous names such as <i>Tonsil</i> and <i>ZootleWordle</i>) is kept as separate nodes.</li>
-    <li>This About panel opens on a plain visit, with no concept in the hash or query. A URL that already names a concept, such as <code>#concept=Thumb</code>, or a lesson, such as <code>#lesson=orientation</code>, skips the automatic popup. The About button in the side strip always opens it. The tour starts only from Start the tour, not by itself.</li>
+    <li>This About panel opens on a plain visit, with no concept in the hash or query. A URL that already names a concept, such as <code>#concept=Thumb</code>, or a lesson, such as <code>#lesson=orientation</code>, skips the automatic popup. The About button in the side strip always opens it. The tour does not start by itself. Tutorial in the top bar opens the chapter list. Start the tour, in this dialog, starts chapter 0.</li>
     <li><b>Relationships</b> are off until you turn the toggle on. They are the roles in the concept’s OWL definition, drawn as dashed arrows in the colour of their property group, pointing at the filler. Is-a links have no arrowheads: ancestors already sit upwards. The side panel lists each role with a checkbox; the first 16 are checked to start with, and All / None plus “shown X of N” let you pick a subset, or all of them, when a concept has many. Ticking a box while the toggle is off turns drawing on. The ticks are kept while you toggle drawing, and are reset when you open another concept. Every selected target is climbed by is-a to the root, and clustering folds the ancestors those targets share. The encircled i beside a heading explains how to read that section. A nested filler such as <i>hasConsequence (X which hasReversibility Reversible)</i> is one edge to X, or to the generated which-class when that class is the filler. The nesting stays in the definition text.</li>
     <li><b>Sanctions and qualifiers</b> work the same way as Relationships: off until you turn the toggle on, not stored in the address, with a scrollable checkbox list, All / None, and “shown X of N”. They are the allowed roles for this concept, drawn as dotted arrows in a single colour, with the same style of arrowhead as Relationships. A sanction says what is allowed; a definition relationship says what this concept has.</li>
     <li><b>Incoming relationships</b> list the concepts whose definitions use the focus as a role filler, for example <i>Thumb hasOrdinalPosition first</i>. Nothing is ticked to start with. Tick a row to add that concept to the graph, with a dashed arrow pointing at the focus. A filter narrows long lists.</li>
@@ -132,11 +133,11 @@
   <button type="button" id="tip-x" aria-label="Close preview" hidden>×</button>
   <div id="tip-body"></div>
 </div>
-<script src="lib/d3.min.js?v=16"></script>
-<script src="lib/d3-dag.min.js?v=16"></script>
-<script src="js/data.js?v=16"></script>
-<script src="js/graph.js?v=16"></script>
-<script src="js/hash.js?v=16"></script>
-<script src="js/app.js?v=16"></script>
+<script src="lib/d3.min.js?v=18"></script>
+<script src="lib/d3-dag.min.js?v=18"></script>
+<script src="js/data.js?v=18"></script>
+<script src="js/graph.js?v=18"></script>
+<script src="js/hash.js?v=18"></script>
+<script src="js/app.js?v=18"></script>
 </body>
 </html>
