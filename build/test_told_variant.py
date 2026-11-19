@@ -87,8 +87,8 @@ class ToldVariantTests(unittest.TestCase):
 
     def test_asset_version_bumped(self):
         html = (SITE / "index.html").read_text(encoding="utf-8")
-        self.assertNotIn("?v=16", html)
-        self.assertIn("?v=17", html)
+        self.assertNotIn("?v=17", html)
+        self.assertIn("?v=18", html)
 
     @unittest.skipUnless(shutil.which("node"), "node is not installed")
     def test_browser_loader_in_node(self):

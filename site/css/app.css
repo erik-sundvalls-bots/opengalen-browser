@@ -36,6 +36,17 @@ a { color: var(--teal); }
   min-width: 0;
 }
 h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; white-space: nowrap; }
+#tutorial-open {
+  flex: none;
+  border: 0;
+  background: var(--teal);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+}
 .search { flex: 1 1 220px; position: relative; min-width: 160px; }
 #q {
   width: 100%;

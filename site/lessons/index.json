@@ -4,7 +4,7 @@
     {
       "id": "orientation",
       "chapter": 0,
-      "title": "Orientation",
+      "title": "Tour of the screen",
       "kind": "tour",
       "file": "orientation.json",
       "audiences": ["newcomer", "clinician", "informatician"]

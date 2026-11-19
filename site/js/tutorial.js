@@ -2,7 +2,7 @@
    Progress is stored in localStorage under og-tutorial and is not sent anywhere. */
 (function () {
   const OG = (window.OG = window.OG || {});
-  const ASSET = "17";
+  const ASSET = "18";
   const STORE = "og-tutorial";
   const PDF = "https://pen-pad-revival.github.io/assets/PEN-PAD-GALEN-GRAIL.pdf";
   const ACK = "This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org).";
@@ -107,7 +107,7 @@
       + "<div id='lesson-quotes'></div>"
       + "<p id='lesson-dump' class='lesson-dump' hidden></p>"
       + "<ol id='lesson-steps' class='lesson-steps'></ol>"
-      + "<div class='lesson-nav'><button type='button' id='lesson-back'>Back</button><button type='button' id='lesson-next'>Next</button></div>"
+      + "<div class='lesson-nav'><button type='button' id='lesson-back'>← Back</button><button type='button' id='lesson-next'>Next →</button></div>"
       + "<h3 class='lesson-h'>Chapters</h3>"
       + "<ol id='lesson-toc' class='lesson-toc'></ol>"
       + "<p class='lesson-save'>Progress is saved only in this browser. Nothing is sent.</p>"
@@ -133,26 +133,41 @@
       + "<div id='tour-shade'></div>"
       + "<div id='tour-hole'></div>"
       + "<div id='tour-card' role='dialog' aria-modal='false' aria-labelledby='tour-title'>"
+      + "<div id='tour-step'>"
       + "<p id='tour-kicker' class='lesson-kicker'></p>"
       + "<h2 id='tour-title'></h2>"
       + "<div id='tour-body'></div>"
       + "<p id='tour-task' class='lesson-task' hidden></p>"
       + "<div id='tour-quotes'></div>"
       + "<div class='tour-nav'>"
-      + "<button type='button' id='tour-back'>Back</button>"
-      + "<button type='button' id='tour-next'>Next</button>"
-      + "<button type='button' id='tour-skip'>Skip</button>"
-      + "</div></div>";
+      + "<button type='button' id='tour-back'>← Back</button>"
+      + "<button type='button' id='tour-skip'>Skip tour</button>"
+      + "<button type='button' id='tour-next'>Next →</button>"
+      + "</div></div>"
+      + "<div id='tour-end' hidden>"
+      + "<p class='lesson-kicker'>Tutorial</p>"
+      + "<h2 id='tour-end-title'>Tour of the screen (chapter 0)</h2>"
+      + "<p id='tour-end-text'></p>"
+      + "<div class='tour-nav'>"
+      + "<button type='button' id='tour-close'>Close</button>"
+      + "<button type='button' id='tour-continue'>Continue to chapter 2 (layers) →</button>"
+      + "</div></div></div>";
     document.body.appendChild(tour);
     tour.querySelector("#tour-back").addEventListener("click", () => shift(-1));
     tour.querySelector("#tour-next").addEventListener("click", () => shift(1));
     tour.querySelector("#tour-skip").addEventListener("click", closeLessons);
+    tour.querySelector("#tour-close").addEventListener("click", closeLessons);
+    tour.querySelector("#tour-continue").addEventListener("click", () => open("layers", 1));
+    tour.querySelector("#tour-end-text").textContent = "That’s the end of the tour. Chapter 2 is the next lesson: meaning, background, and data.";
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape" || tour.hidden) return;
       event.preventDefault();
       closeLessons();
     });
-    window.addEventListener("resize", () => { if (!tour.hidden) placeTour(); });
+    window.addEventListener("resize", () => {
+      if (!tour.hidden) placeTour();
+      placeLesson();
+    });
     document.addEventListener("og-draw", () => {
       if (!tour.hidden) placeTour();
       if (document.body.classList.contains("tutorial-on")) widenToldHits();
@@ -161,6 +176,7 @@
       if (!document.body.classList.contains("tutorial-on")) return;
       wrapExplain();
       if (currentSpec) applySpecChrome(currentSpec);
+      placeLesson();
     });
     document.addEventListener("pointerover", onExplainOver);
     document.addEventListener("pointerout", onExplainOut);
@@ -215,6 +231,8 @@
     }
     if (method === "replace") {
       history.replaceState(null, "", next);
+      const api = host();
+      if (api && name && api.focusName() !== name) api.go(name);
       syncFromHash();
     } else {
       location.hash = next;
@@ -340,7 +358,9 @@
       button.type = "button";
       if (chapter.id === activeId) button.setAttribute("aria-current", "true");
       const title = document.createElement("span");
-      title.textContent = (chapter.chapter === 0 ? "Tour" : "Chapter " + chapter.chapter) + ". " + chapter.title;
+      title.textContent = chapter.kind === "tour" || chapter.chapter === 0
+        ? "Tour of the screen (chapter 0)"
+        : "Chapter " + chapter.chapter + ". " + chapter.title;
       button.append(title);
       if (chapter.status === "awaiting-author") {
         const mark = document.createElement("span");
@@ -382,9 +402,135 @@
     });
   }
 
+  function boxesOverlap(a, b, pad) {
+    const gap = pad || 0;
+    return a.left < b.right + gap && a.right > b.left - gap && a.top < b.bottom + gap && a.bottom > b.top - gap;
+  }
+
+  function visibleBox(selector) {
+    if (!selector) return null;
+    const el = document.querySelector(selector);
+    if (!el || el.hidden) return null;
+    const rect = el.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return null;
+    return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height };
+  }
+
+  /* Put the card on the side of the target with the most free space, and keep it off the target. */
+  function placeBeside(card, obstacles) {
+    const margin = 8;
+    const gap = 12;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const cardWidth = Math.min(340, vw - margin * 2);
+    card.style.width = cardWidth + "px";
+    card.style.maxHeight = Math.round(vh * 0.72) + "px";
+    const ch = Math.min(card.offsetHeight || 200, Math.round(vh * 0.72));
+    const cw = cardWidth;
+    const primary = obstacles[0];
+    const sides = [
+      { side: "right", space: vw - primary.right - gap - margin, left: primary.right + gap, top: primary.top },
+      { side: "left", space: primary.left - gap - margin, left: primary.left - gap - cw, top: primary.top },
+      { side: "bottom", space: vh - primary.bottom - gap - margin, left: primary.left, top: primary.bottom + gap },
+      { side: "top", space: primary.top - gap - margin, left: primary.left, top: primary.top - gap - ch }
+    ].sort((a, b) => b.space - a.space);
+
+    function fits(left, top) {
+      if (left < margin - 1 || top < margin - 1) return false;
+      if (left + cw > vw - margin + 1 || top + ch > vh - margin + 1) return false;
+      const box = { left: left, top: top, right: left + cw, bottom: top + ch };
+      for (let i = 0; i < obstacles.length; i++) {
+        if (boxesOverlap(box, obstacles[i], 8)) return false;
+      }
+      return true;
+    }
+
+    const shifts = [0, 48, -48, 120, -120, 200, -200, 280, -280];
+    for (let s = 0; s < sides.length; s++) {
+      const cand = sides[s];
+      for (let i = 0; i < shifts.length; i++) {
+        let left = cand.left;
+        let top = cand.top;
+        if (cand.side === "left" || cand.side === "right") top += shifts[i];
+        else left += shifts[i];
+        left = Math.max(margin, Math.min(left, vw - cw - margin));
+        top = Math.max(margin, Math.min(top, vh - ch - margin));
+        if (fits(left, top)) {
+          card.style.left = left + "px";
+          card.style.top = top + "px";
+          return;
+        }
+      }
+    }
+
+    /* Shrink into a free side. Do not slide the card back across the target. */
+    const savedWidth = card.style.width;
+    const savedMax = card.style.maxHeight;
+    for (let s = 0; s < sides.length; s++) {
+      const edge = sides[s];
+      let maxW = cw;
+      let maxH = Math.round(vh * 0.72);
+      if (edge.side === "right") maxW = vw - primary.right - gap - margin;
+      else if (edge.side === "left") maxW = primary.left - gap - margin;
+      else if (edge.side === "bottom") maxH = vh - primary.bottom - gap - margin;
+      else maxH = primary.top - gap - margin;
+      if (maxW < 160 || maxH < 90) continue;
+      card.style.width = Math.min(cw, maxW) + "px";
+      card.style.maxHeight = Math.min(Math.round(vh * 0.72), maxH) + "px";
+      const fw = Math.min(cw, maxW);
+      const fh = Math.min(card.offsetHeight || maxH, maxH);
+      let left = margin;
+      let top = margin;
+      if (edge.side === "right") {
+        left = primary.right + gap;
+        top = Math.min(Math.max(margin, primary.top), vh - fh - margin);
+      } else if (edge.side === "left") {
+        left = primary.left - gap - fw;
+        top = Math.min(Math.max(margin, primary.top), vh - fh - margin);
+      } else if (edge.side === "bottom") {
+        top = primary.bottom + gap;
+        left = Math.min(Math.max(margin, primary.left), vw - fw - margin);
+      } else {
+        top = primary.top - gap - fh;
+        left = Math.min(Math.max(margin, primary.left), vw - fw - margin);
+      }
+      const box = { left: left, top: top, right: left + fw, bottom: top + fh };
+      let blocked = false;
+      for (let i = 0; i < obstacles.length; i++) {
+        if (boxesOverlap(box, obstacles[i], 6)) blocked = true;
+      }
+      if (blocked || left < margin || top < margin || left + fw > vw - margin || top + fh > vh - margin) continue;
+      card.style.left = left + "px";
+      card.style.top = top + "px";
+      return;
+    }
+    card.style.width = savedWidth;
+    card.style.maxHeight = savedMax;
+    card.style.left = margin + "px";
+    card.style.top = margin + "px";
+  }
+
+  function placeEndCard() {
+    const card = document.getElementById("tour-card");
+    const header = document.querySelector(".topbar");
+    const margin = 8;
+    const width = Math.min(340, window.innerWidth - margin * 2);
+    card.style.width = width + "px";
+    card.style.maxHeight = Math.round(window.innerHeight * 0.72) + "px";
+    const top = (header ? header.getBoundingClientRect().bottom : 8) + 12;
+    const left = Math.max(margin, window.innerWidth - width - margin);
+    card.style.top = top + "px";
+    card.style.left = left + "px";
+  }
+
   function placeTour() {
     const ui = els();
     if (!ui.tour || ui.tour.hidden) return;
+    const end = document.getElementById("tour-end");
+    if (end && !end.hidden) {
+      placeEndCard();
+      return;
+    }
     const parsed = current();
     const lesson = lessons[parsed.id];
     if (!lesson) return;
@@ -399,12 +545,14 @@
     const top = Math.max(0, rect.top - pad);
     const width = Math.max(24, rect.width + pad * 2);
     const height = Math.max(24, rect.height + pad * 2);
+    ui.hole.hidden = false;
     ui.hole.style.left = left + "px";
     ui.hole.style.top = top + "px";
     ui.hole.style.width = width + "px";
     ui.hole.style.height = height + "px";
     const shade = document.getElementById("tour-shade");
     if (shade) {
+      shade.hidden = false;
       const right = left + width;
       const bottom = top + height;
       const vw = window.innerWidth;
@@ -413,27 +561,36 @@
         + "px, 0px " + vh + "px, 0px 0px, " + left + "px " + top + "px, " + right + "px " + top
         + "px, " + right + "px " + bottom + "px, " + left + "px " + bottom + "px, " + left + "px " + top + "px)";
     }
-    const card = ui.card;
-    const cardWidth = Math.min(340, window.innerWidth - 16);
-    card.style.width = cardWidth + "px";
-    const cardHeight = card.offsetHeight || 200;
-    let cardTop = rect.bottom + 12;
-    let cardLeft = Math.max(8, rect.left);
-    if (rect.height > window.innerHeight * 0.45) {
-      cardTop = Math.max(8, rect.top + 16);
-      cardLeft = Math.max(8, rect.left + 16);
-    }
-    if (cardTop + cardHeight > window.innerHeight - 8) cardTop = Math.max(8, rect.top - cardHeight - 12);
-    if (cardLeft + cardWidth > window.innerWidth - 8) cardLeft = Math.max(8, window.innerWidth - cardWidth - 8);
-    card.style.top = cardTop + "px";
-    card.style.left = cardLeft + "px";
+    const obstacles = [];
+    const primary = visibleBox(spec.target) || visibleBox("#stage");
+    if (primary) obstacles.push(primary);
+    const extra = visibleBox(spec.highlight);
+    if (extra) obstacles.push(extra);
+    if (!obstacles.length) obstacles.push({ left: 8, top: 8, right: 80, bottom: 80, width: 72, height: 72 });
+    placeBeside(ui.card, obstacles);
+  }
+
+  /* On a narrow window the lesson sheet must not cover the highlighted section. */
+  function placeLesson() {
+    const lesson = document.getElementById("lesson");
+    if (!lesson || lesson.hidden) return;
+    lesson.classList.remove("dock-top");
+    if (window.innerWidth > 960 || !currentSpec) return;
+    const box = visibleBox(currentSpec.highlight || currentSpec.target);
+    if (!box) return;
+    const sheet = lesson.getBoundingClientRect();
+    const overlaps = boxesOverlap(box, { left: sheet.left, top: sheet.top, right: sheet.right, bottom: sheet.bottom }, 0);
+    if (overlaps && box.top > window.innerHeight * 0.35) lesson.classList.add("dock-top");
   }
 
   function renderTour(lesson, step) {
     showShell("tour");
     const spec = lesson.steps[step - 1];
     const ui = els();
-    ui.tourKicker.textContent = "Tour · " + step + " of " + lesson.steps.length;
+    document.getElementById("tour-end").hidden = true;
+    document.getElementById("tour-step").hidden = false;
+    document.getElementById("tour-card").setAttribute("aria-labelledby", "tour-title");
+    ui.tourKicker.textContent = "Tour of the screen (chapter 0) · " + step + " of " + lesson.steps.length;
     ui.tourTitle.textContent = spec.title;
     fillProse(ui.tourBody, spec.body);
     if (spec.note) {
@@ -445,9 +602,10 @@
     ui.tourTask.hidden = !spec.task;
     ui.tourTask.textContent = spec.task ? "Do this. " + spec.task : "";
     fillQuotes(ui.tourQuotes, spec, lesson.pdf);
+    ui.tourBack.hidden = step <= 1;
     ui.tourBack.disabled = step <= 1;
     ui.tourNext.disabled = false;
-    ui.tourNext.textContent = step >= lesson.steps.length ? "Done" : "Next";
+    ui.tourNext.textContent = step >= lesson.steps.length ? "Done" : "Next →";
     currentSpec = null;
     highlight(spec.highlight || spec.target);
     placeTour();
@@ -482,11 +640,13 @@
     ui.dump.textContent = spec.dump || "";
     renderSteps(lesson, step);
     renderToc(lesson.id);
+    ui.back.hidden = step <= 1;
     ui.back.disabled = step <= 1;
     ui.next.disabled = false;
-    ui.next.textContent = step >= lesson.steps.length ? "Done" : "Next";
+    ui.next.textContent = step >= lesson.steps.length ? "Done" : "Next →";
     currentSpec = spec;
     applySpecChrome(spec);
+    placeLesson();
     widenToldHits();
   }
 
@@ -495,7 +655,7 @@
     const ui = els();
     ui.title.textContent = "Lessons";
     ui.kicker.textContent = "Choose a chapter";
-    fillProse(ui.body, "The tour is a short look at the browser. The lessons walk meaning and background, sanctions, named compositions, and where a terminology stops before a record. Final wording is Erik’s to sign off.");
+    fillProse(ui.body, "The tutorial starts with a tour of the screen (chapter 0). The later chapters walk meaning and background, sanctions, named compositions, and where a terminology stops before a record.");
     currentSpec = null;
     ui.task.hidden = true;
     ui.quotes.replaceChildren();
@@ -561,13 +721,32 @@
     const last = lesson.steps.length;
     if (delta > 0) markDone(lesson.id, step);
     if (delta > 0 && step >= last) {
-      closeLessons();
+      if (lesson.kind === "tour") showTourEnd();
+      else closeLessons();
       return;
     }
     const next = step + delta;
     if (next < 1 || next > last) return;
     const spec = lesson.steps[next - 1];
     writeHash(spec.concept || parsed.concept, lesson.id, next, "push");
+  }
+
+  function showTourEnd() {
+    ensureDom();
+    const step = document.getElementById("tour-step");
+    const end = document.getElementById("tour-end");
+    const shade = document.getElementById("tour-shade");
+    const hole = document.getElementById("tour-hole");
+    if (step) step.hidden = true;
+    if (end) end.hidden = false;
+    document.getElementById("tour-card").setAttribute("aria-labelledby", "tour-end-title");
+    if (shade) shade.hidden = true;
+    if (hole) hole.hidden = true;
+    clearHighlight();
+    currentSpec = null;
+    document.getElementById("tour").hidden = false;
+    document.body.classList.add("tour-open", "tutorial-on");
+    placeEndCard();
   }
 
   function closeLessons() {
