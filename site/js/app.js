@@ -1447,7 +1447,7 @@
     resizeTimer = setTimeout(() => { if (model) draw(); }, 150);
   });
 
-  const ASSET = "16";
+  const ASSET = "17";
   const readyWaiters = [];
   function setSwitch(key, on) {
     if (!model || !Object.prototype.hasOwnProperty.call(state, key)) return;

@@ -337,6 +337,8 @@ Deep links are restored after `Load`. Progress ticks are read from `localStorage
 
 **Phase 1 — MVP.** Lesson-panel shell, hash extension, orientation tour (chapter 0), and chapters 2–4 (layers, sanctions, composition). YAML/JSON lesson files for those chapters only. “Explain this” limited to a few keywords (`sensibly`, `topicNecessarily`, `which`, `newSub`) and the red told-parent banner. Progress in `localStorage`. Manual walkthrough plus a small test that every `concept:` in the lesson files exists in `graph.bin.gz`.
 
+Chapters 0 and 2 were written before Alan’s November 2026 reply. Chapters 3 and 4, and chapter 5 with the chain in §5.2 as the main text, were written after that reply. Question 6 is still open: chapter 5 carries a marked aside Erik can keep or drop.
+
 **Phase 2.** Chapters 1, 5–8, checkpoints, a Lessons index in About and the rail, resume-from-last-step, and highlight support for incoming relationships (the `first` / Thumb example).
 
 **Phase 3 (optional).** Read-only “try this expression” box constrained to named concepts already in the dump; richer “Explain this” on property groups; a Clinergy-mapper landing page that only lists OpenGALEN landmarks and deep links (still no Clinergy content in the repo).
@@ -352,15 +354,15 @@ Answers from Erik, 18 Nov 2026, are given under each question.
 1. Is the November 2026 PDF the text lessons should cite, given that it is still a draft? Should lesson quotations wait for a later revision?
    - **Answer (Erik):** Cite and quote the draft now; no need to wait.
 2. The draft says sanctions were omitted from “the OpenGrail models” (p. 3). This browser still shows them for OpenGALEN 8. Which statement should the tutorial lead with?
-   - **Open:** asked Alan.
+   - **Answer (Alan, November 2026, personal communication to Erik):** He is fine with the lessons proceeding. On sanctions he wrote that he should have said they were omitted “in the owl version except as comments ( not guaranteed to be complete)”. The lesson therefore teaches sanctions as part of GRAIL / OpenGALEN 8. Checked against `sources/opengalen8-owl-sources.zip` (the OWL-F files): there are no `Comment(` axioms. Sensible and grammatical sanctions are `AnnotationAssertion`s on `S-SANCTION-…AP` and `G-SANCTION-…AP`, for example `AnnotationAssertion(S-SANCTION-hasStructuralComponentAP Hand "Finger")` in `OpenGALEN8_MedicalExtensions_HumanAnatomy.owl`. The string `topicNecessarily` does not occur in those OWL files; the browser’s `topicNecessarily` lines are read from the GRAIL sources. The lesson states that, and attributes the “comments, not guaranteed complete” wording to Alan rather than claiming a full audit.
 3. Are the property-name mappings in §4 (especially `hasStructuralComponent` for `is_part_of` / `hasPart`, and `hasLeftRightSelector` for `hasLaterality`) acceptable to Alan, or is a different correspondence preferred?
-   - **Open:** asked Alan.
+   - **Answer (Alan, November 2026, personal communication to Erik):** Yes. He wrote that he had taken the examples from more generic papers that used more obvious labels, that there should have been a warning, and “Please feel free to amend as you see fit.” Lessons use the OpenGALEN 8 names (`hasStructuralComponent` / `isStructuralComponentOf`, `hasLeftRightSelector` with `leftSelection` / `rightSelection`, `CardiovascularSystem`, `topicNecessarily`) and say when a quotation is using the draft’s generic label. His reply, verbatim: “I'm fine with this. The document requires more checking and editing than I had time for. As for sanctions, I should have said " in the owl version except as comments ( not guaranteed to be complete)" or something of the sort. And yes, I grabbed grabbed the examples from more generic papers that used more obvious label. Should have been a warning. Please feel free to amend as you see fit.”
 4. Should the orientation tour auto-start for first-time visitors, or only from About / a rail button?
    - **Answer (Erik):** Start it from the About dialog; no auto-start.
 5. May lesson text quote the draft at the length used in §2, or should teaching points be paraphrased even more tightly?
    - **Answer (Erik):** Quoting at that length is fine.
 6. Is chapter 5’s pointer to openEHR/FHIR as the place for “this patient / this encounter / duration” the intended encapsulation story, or should that chapter stay inside Alan’s documentation–statement–observation–situation chain only?
-   - **Open:** question being clarified with Erik.
+   - **Still open, pending Erik.** The written chapter keeps the documentation–statement–observation–situation chain as the main text. One aside, marked `TODO(erik)` in `site/lessons/encapsulation.json`, says that information models such as openEHR or FHIR are where those particulars are commonly recorded today. Erik can keep or drop that aside. It is not attributed to Alan.
 7. Should a Clinergy-mapper landing page wait until a mapping effort is actually starting?
    - **Answer (Erik):** Yes, wait.
 8. Who writes and signs off the final lesson wording — Erik, Alan, or both?

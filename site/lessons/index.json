@@ -20,19 +20,25 @@
     {
       "id": "sanctions",
       "chapter": 3,
-      "title": "Sanctions",
+      "title": "Sanctions: grammatical, sensible, necessary",
       "kind": "lesson",
-      "status": "awaiting-author",
       "file": "sanctions.json",
       "audiences": ["informatician", "newcomer"]
     },
     {
       "id": "composition",
       "chapter": 4,
-      "title": "Composition",
+      "title": "Compositional concepts",
       "kind": "lesson",
-      "status": "awaiting-author",
       "file": "composition.json",
+      "audiences": ["clinician", "informatician"]
+    },
+    {
+      "id": "encapsulation",
+      "chapter": 5,
+      "title": "Where the terminology ends",
+      "kind": "lesson",
+      "file": "encapsulation.json",
       "audiences": ["clinician", "informatician"]
     }
   ]

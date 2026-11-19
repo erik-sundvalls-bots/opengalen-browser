@@ -3,20 +3,108 @@
   "chapter": 3,
   "title": "Sanctions: grammatical, sensible, necessary",
   "kind": "lesson",
-  "status": "awaiting-author",
   "pdf": "https://pen-pad-revival.github.io/assets/PEN-PAD-GALEN-GRAIL.pdf",
-  "source": "Rector, PEN&PAD, GALEN & GRAIL, DRAFT Nov 2026, pp. 3–4, §4.1. Not taught in this version.",
-  "todoAlan": [
-    "TODO(alan): Design §11 question 2 is open. The draft says sanctions “were not included in the OpenGrail models as they were considered obsolete for the terminology” (p. 3, §4.1). This browser still shows sensible and grammatical sanctions and topicNecessarily lines for OpenGALEN 8. Do not teach a framing until Alan says which statement the tutorial should lead with.",
-    "TODO(alan): Design §11 question 3 is open. Do not teach these correspondences until Alan confirms them: is_part_of / hasPart → hasStructuralComponent, hasLaterality → hasLeftRightSelector, CirculatorySystem → CardiovascularSystem, necessarily → topicNecessarily."
-  ],
+  "source": "Rector, PEN&PAD, GALEN & GRAIL, DRAFT Nov 2026, pp. 3–5, §4.1 and §7. Alan Rector, November 2026, personal communication to Erik.",
   "steps": [
     {
-      "id": "waiting",
-      "title": "Awaiting author review",
-      "body": "This chapter is not taught yet. It is waiting on Alan Rector. The draft says sanctions were left out of the OpenGrail models, while this browser still shows sanction lines. Separately, several names in the draft are not the names in this dump. The lesson will not say which way to present either point until he answers.",
-      "task": "The Sanctions and qualifiers control in the side panel still works. This lesson does not say what those lines mean.",
-      "dump": "Nothing in this step is a claim about how a sanction relates to a definition. That text is blocked on the notes marked TODO(alan) in this file."
+      "id": "sensible",
+      "title": "A sensible sanction",
+      "concept": "Hand",
+      "concepts": ["Finger", "AbdominalCavity", "Abdomen"],
+      "properties": ["hasStructuralComponent", "isStructuralComponentOf"],
+      "highlight": "#qual-section",
+      "actions": { "quals": true },
+      "body": "A sanction says what it is sensible to say. It is not the definition of this concept. Hand’s list includes a sensible structural-component sanction for Finger. Turn the Sanctions and qualifiers control on and the ticked lines can be drawn; the list itself is the thing to read.",
+      "task": "In Sanctions and qualifiers, find “sensibly hasStructuralComponent Finger”.",
+      "quotes": [
+        {
+          "text": "The original goal of GRAIL was to specify “all and only what it was sensible to say”",
+          "cite": "p. 3, §4.1"
+        },
+        {
+          "text": "Sensibly: Finger is_part_of some Hand",
+          "cite": "p. 3, §4.1"
+        }
+      ],
+      "dump": "In this dump, Hand lists “sensibly hasStructuralComponent Finger”. The draft’s is_part_of and hasPart are not property names here. The names are hasStructuralComponent and isStructuralComponentOf. AbdominalCavity lists “sensibly isStructuralComponentOf Abdomen”. The draft’s example runs from the part to the whole; Hand’s sanction runs from the whole to the part. Alan Rector said in November 2026, in a personal communication to Erik, that the draft’s examples were taken from more generic papers that used more obvious labels, and that this correspondence is acceptable.",
+      "note": "Alan Rector, November 2026, personal communication to Erik: he is content with these lessons, the draft still needs his own checking, and the example labels were the obvious ones from more generic papers."
+    },
+    {
+      "id": "grammatical",
+      "title": "A grammatical sanction",
+      "concept": "Cell",
+      "concepts": ["Tissue"],
+      "properties": ["makesUp"],
+      "highlight": "#qual-section",
+      "actions": { "quals": true },
+      "body": "The draft distinguishes two sanction levels, grammatical and sensible. Grammatical is the high-level pattern. Hand’s list has no line beginning grammatically. Cell does.",
+      "task": "Find “grammatically makesUp Tissue”.",
+      "quotes": [
+        {
+          "text": "Sanctions had two levels: grammatical and sensible",
+          "cite": "p. 3, §4.1"
+        },
+        {
+          "text": "(Note: sanctions were not included in the OpenGrail models as they were considered obsolete for the terminology)",
+          "cite": "p. 3, §4.1"
+        }
+      ],
+      "dump": "In this dump, Cell lists “grammatically makesUp Tissue”. In the OWL files shipped here, that kind of line is an annotation assertion, not a class axiom, and those files contain no Comment axiom. Hand’s finger sanction is AnnotationAssertion(S-SANCTION-hasStructuralComponentAP Hand \"Finger\") in OpenGALEN8_MedicalExtensions_HumanAnatomy.owl. Alan Rector’s November 2026 clarification to Erik was that the draft should have said sanctions were omitted from the OWL version except as comments, not guaranteed to be complete. These files bear that out as annotations rather than as logical axioms. This lesson does not claim the annotations copy every GRAIL sanction.",
+      "note": "The string topicNecessarily does not occur in the OWL files in this repository. Lines that include it are read from the GRAIL sources."
+    },
+    {
+      "id": "necessarily",
+      "title": "topicNecessarily",
+      "concept": "Hand",
+      "concepts": ["PhalanxOfFinger", "DigitalRayOfHand", "Heart", "CardiovascularSystem"],
+      "properties": ["hasStructuralComponent", "hasSpecificStructuralComponent", "isFunctionalComponentOf"],
+      "highlight": "#qual-section",
+      "actions": { "quals": true },
+      "body": "The draft uses “necessarily” to mark a logical commitment, distinct from sanctions and extrinsics. This browser’s keyword on the GRAIL lines is topicNecessarily. It is not a property name. Hand carries it both combined with sensibly and on its own.",
+      "task": "Find “sensiblyAndTopicNecessarily hasStructuralComponent PhalanxOfFinger” and “topicNecessarily hasSpecificStructuralComponent DigitalRayOfHand”.",
+      "quotes": [
+        {
+          "text": "Necessarily: Thumb is_part_of some Hand",
+          "cite": "p. 3, §4.1"
+        },
+        {
+          "text": "In practice for convenience, keywords to combine levels were provided, e.g. GrammaticallyAnd Sensibly",
+          "cite": "p. 4, §4.1"
+        },
+        {
+          "text": "The use of “necessarily” in the keywords reflect an attempt to make clear to authors the commitment an Logical/Ontological layer separate from the “sanctions” and “extrinsics”.",
+          "cite": "p. 5, §7"
+        }
+      ],
+      "dump": "In this dump, Hand lists “sensiblyAndTopicNecessarily hasStructuralComponent PhalanxOfFinger” and “topicNecessarily hasSpecificStructuralComponent DigitalRayOfHand”. The combined keyword in the draft’s example is “GrammaticallyAnd Sensibly”, which is not the spelling on this list. CirculatorySystem is not a concept here. Heart lists “sensibly isFunctionalComponentOf CardiovascularSystem” and “sensiblyAndTopicNecessarily isFunctionalComponentOf CardiovascularSystem”. Alan Rector accepted topicNecessarily as the correspondence to the draft’s “necessarily”, and CardiovascularSystem as the name for the draft’s CirculatorySystem (November 2026, personal communication to Erik)."
+    },
+    {
+      "id": "digit",
+      "title": "What a definition may specialise",
+      "concept": "Digit",
+      "concepts": ["first", "second", "third", "fourth", "fifth", "leftSelection", "rightSelection", "LeftRightSelector"],
+      "properties": ["hasOrdinalPosition", "hasLeftRightSelector"],
+      "highlight": "#qual-section",
+      "actions": { "quals": true },
+      "body": "A concept’s definition had to specialise a sensible sanction. Digit’s sensible ordinal sanctions are the pattern a definition of a particular digit can specialise. The next step opens that definition.",
+      "task": "Find “sensibly hasOrdinalPosition first” and the same role for second, third, fourth, and fifth.",
+      "quote": {
+        "text": "No concept could be defined by an expression unless that expression was a specialisation of a sensible sanction.",
+        "cite": "p. 3, §4.1"
+      },
+      "dump": "In this dump, Digit lists “sensibly hasOrdinalPosition first” through “sensibly hasOrdinalPosition fifth”. The draft’s laterality example is “Sensibly: Digit hasLaterality some Laterality” (p. 4, §4.1). hasLaterality and Laterality are not names here. The laterality property is hasLeftRightSelector, and the values include leftSelection and rightSelection. LeftRightSelector is the selector concept. That nested use is in the next chapter."
+    },
+    {
+      "id": "thumb",
+      "title": "The definition that specialises it",
+      "concept": "Thumb",
+      "concepts": ["Pollux", "Finger", "first"],
+      "properties": ["hasOrdinalPosition"],
+      "highlight": "#def-section",
+      "actions": { "quals": false },
+      "body": "Thumb and Pollux are one concept. The definition is a finger at the first ordinal position. That is a definition, not a sanction: it uses the role Digit’s sensible sanction allows.",
+      "task": "Read the definition. Then look back, if you want, at Digit’s “sensibly hasOrdinalPosition first”.",
+      "dump": "In this dump the definition is “Finger which hasOrdinalPosition first”. There is no concept named by the draft’s “Thumb is_part_of some Hand”."
     }
   ]
 }

@@ -2,7 +2,7 @@
    Progress is stored in localStorage under og-tutorial and is not sent anywhere. */
 (function () {
   const OG = (window.OG = window.OG || {});
-  const ASSET = "16";
+  const ASSET = "17";
   const STORE = "og-tutorial";
   const PDF = "https://pen-pad-revival.github.io/assets/PEN-PAD-GALEN-GRAIL.pdf";
   const ACK = "This product uses the OpenGALEN Clinical Terminology, Copyright the Universities of Manchester and Nijmegen, licensed through OpenGALEN (www.opengalen.org).";
@@ -28,6 +28,7 @@
   let tocSticky = false;
   let syncToken = 0;
   let built = false;
+  let currentSpec = null;
 
   function loadProgress() {
     try {
@@ -157,7 +158,9 @@
       if (document.body.classList.contains("tutorial-on")) widenToldHits();
     });
     document.addEventListener("og-panel", () => {
-      if (document.body.classList.contains("tutorial-on")) wrapExplain();
+      if (!document.body.classList.contains("tutorial-on")) return;
+      wrapExplain();
+      if (currentSpec) applySpecChrome(currentSpec);
     });
     document.addEventListener("pointerover", onExplainOver);
     document.addEventListener("pointerout", onExplainOut);
@@ -228,6 +231,12 @@
       return true;
     }
     return false;
+  }
+
+  function applySpecChrome(spec) {
+    if (!spec) return;
+    applyControls(spec);
+    highlight(spec.highlight || spec.target);
   }
 
   function applyControls(spec) {
@@ -318,6 +327,7 @@
     unwrapExplain();
     setPressed(false);
     appliedKey = "";
+    currentSpec = null;
   }
 
   function renderToc(activeId) {
@@ -438,6 +448,7 @@
     ui.tourBack.disabled = step <= 1;
     ui.tourNext.disabled = false;
     ui.tourNext.textContent = step >= lesson.steps.length ? "Done" : "Next";
+    currentSpec = null;
     highlight(spec.highlight || spec.target);
     placeTour();
     widenToldHits();
@@ -452,6 +463,18 @@
     ui.kicker.textContent = "Chapter " + (lesson.chapter || "") + " · Step " + step + " of " + lesson.steps.length
       + (waiting ? " · awaiting author review" : "");
     fillProse(ui.body, spec.body);
+    if (spec.note) {
+      const note = document.createElement("p");
+      note.className = "lesson-note";
+      note.textContent = spec.note;
+      ui.body.append(note);
+    }
+    if (spec.aside) {
+      const aside = document.createElement("aside");
+      aside.className = "lesson-aside";
+      aside.textContent = spec.aside;
+      ui.body.append(aside);
+    }
     ui.task.hidden = !spec.task;
     ui.task.textContent = spec.task ? "Do this. " + spec.task : "";
     fillQuotes(ui.quotes, spec, lesson.pdf);
@@ -462,7 +485,8 @@
     ui.back.disabled = step <= 1;
     ui.next.disabled = false;
     ui.next.textContent = step >= lesson.steps.length ? "Done" : "Next";
-    highlight(spec.highlight);
+    currentSpec = spec;
+    applySpecChrome(spec);
     widenToldHits();
   }
 
@@ -471,7 +495,8 @@
     const ui = els();
     ui.title.textContent = "Lessons";
     ui.kicker.textContent = "Choose a chapter";
-    fillProse(ui.body, "The tour is a short look at the browser. Three layers walks meaning, background knowledge, and why patient data is not in this graph. Sanctions and Composition are waiting on the author.");
+    fillProse(ui.body, "The tour is a short look at the browser. The lessons walk meaning and background, sanctions, named compositions, and where a terminology stops before a record. Final wording is Erik’s to sign off.");
+    currentSpec = null;
     ui.task.hidden = true;
     ui.quotes.replaceChildren();
     ui.dump.hidden = true;
